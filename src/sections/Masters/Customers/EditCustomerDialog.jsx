@@ -114,27 +114,27 @@ export default function EditCustomerDialog({ open, onClose, customer, onSave }) 
 
 
               <Grid item xs={12} md={6}>
-  <TextField
-    label="Alternate Mobile"
-    fullWidth
-    value={form.alternate_mobile}
-    onChange={(e) => {
-      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-      handleChange('alternate_mobile', val);
-    }}
-    inputProps={{
-      maxLength: 10,
-      inputMode: 'numeric',
-    }}
-    InputProps={{
-      startAdornment: (
-        <InputAdornment position="start">
-          +91
-        </InputAdornment>
-      ),
-    }}
-  />
-</Grid>
+                <TextField
+                  label="Alternate Mobile"
+                  fullWidth
+                  value={form.alternate_mobile}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    handleChange('alternate_mobile', val);
+                  }}
+                  inputProps={{
+                    maxLength: 10,
+                    inputMode: 'numeric',
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        +91
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
 
 
 

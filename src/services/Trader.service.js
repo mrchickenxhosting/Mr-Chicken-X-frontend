@@ -129,6 +129,15 @@ export const getTripReport = async () => {
   return response.data;
 }
 
+export const getCustomerSales = async (customerId) => {
+  const res = await axios.get(
+    `trader/reports/customers/${customerId}/sales`
+  );
+  return res.data.rows; // 👈 IMPORTANT
+};
+
+
+
 // ======================= Update Data ===========================
 
 export const UpdateManager = async (managerId, payload) => {

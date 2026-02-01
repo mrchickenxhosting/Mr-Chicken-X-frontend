@@ -1,325 +1,305 @@
-// import { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import { useState, useEffect } from 'react';
 
-// import Grid from '@mui/material/Grid';
-// import Card from '@mui/material/Card';
-// import Stack from '@mui/material/Stack';
-// import Button from '@mui/material/Button';
-// import TextField from '@mui/material/TextField';
-// import Typography from '@mui/material/Typography';
-// import Autocomplete from '@mui/material/Autocomplete';
-// import CircularProgress from '@mui/material/CircularProgress';
+import {
+  Card,
+  Grid,
+  Stack,
+  Button,
+  useTheme,
+  TextField,
+  Typography,
+  Autocomplete,
+  useMediaQuery,
+} from '@mui/material';
 
-// import {
-//   getallFarmer,
-//   getReportData,
-//   getallCustomer,
-// } from 'src/services/Trader.service';
+import {
+  getallTrips,
+  getTripSales,
+  getallCustomer,
+  getCustomerSales,
+} from 'src/services/Trader.service';
 
-// // ----------------------------------------------------------------------
+// --------------------------------------------------
+// HELPERS
 
-// export default function ReportPage() {
-//   const [filters, setFilters] = useState({
-//     startDate: '',
-//     endDate: '',
-//     customer: null,
-//     farmer: null,
-//   });
+const formatDate = (date) => {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};
 
-//   const [customers, setCustomers] = useState([]);
-//   const [farmers, setFarmers] = useState([]);
+// EXPORT TO EXCEL
+const exportSalesToExcel = (sales) => {
+  const data = sales.map((sale) => ({
+    Customer: sale.customer_name,
+    'Sell Type': sale.sell_type,
+    Birds: sale.bird_count,
+    Weight: sale.weight,
+    Rate: sale.rate,
+    'Total Amount': sale.total_amount,
+    'Payment Mode': sale.payment_mode,
+    'Cash Amount': sale.cash_amount,
+    'UPI Amount': sale.upi_amount,
+    Date: formatDate(sale.sale_date || sale.created_at),
+  }));
 
-//   const [loading, setLoading] = useState(false);
-//   const [reportLoading, setReportLoading] = useState(false);
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales');
 
-//   const [reportData, setReportData] = useState(null);
+  const excelBuffer = XLSX.write(workbook, {
+    bookType: 'xlsx',
+    type: 'array',
+  });
 
-//   // ----------------------------------------------------------------------
-//   // LOAD FILTER DROPDOWNS
+  const file = new Blob([excelBuffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
 
-//   useEffect(() => {
-//     loadFilterData();
-//   }, []);
+  saveAs(file, `sales-report-${Date.now()}.xlsx`);
+};
 
-//   const loadFilterData = async () => {
-//     try {
-//       setLoading(true);
-
-//       const [customerRes, farmerRes] = await Promise.all([
-//         getallCustomer(),
-//         getallFarmer(),
-//       ]);
-
-//       setCustomers(customerRes || []);
-//       setFarmers(farmerRes || []);
-
-//     } catch (error) {
-//       console.error('Failed to load report filters', error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   // ----------------------------------------------------------------------
-//   // HANDLE FILTER CHANGE
-
-//   const handleChange = (field, value) => {
-//     setFilters((prev) => ({
-//       ...prev,
-//       [field]: value,
-//     }));
-//   };
-
-//   // ----------------------------------------------------------------------
-//   // APPLY FILTER → FETCH REPORT
-
-//   const handleSubmit = async () => {
-//     try {
-//       const payload = {
-//         startDate: filters.startDate || null,
-//         endDate: filters.endDate || null,
-//         customerId: filters.customer?.id || null,
-//         farmerId: filters.farmer?.id || null,
-
-//         // default grouping (can extend later)
-//         groupBy: 'NONE',
-//       };
-
-//       console.log('REPORT FILTER PAYLOAD:', payload);
-
-//       setReportLoading(true);
-
-//       const data = await getReportData(payload);
-
-//       console.log('REPORT RESPONSE:', data);
-
-//       setReportData(data);
-
-//     } catch (error) {
-//       console.error('Report fetch failed', error);
-//       alert(error?.response?.data?.message || 'Failed to load report');
-//     } finally {
-//       setReportLoading(false);
-//     }
-//   };
-
-//   // ----------------------------------------------------------------------
-//   // RESET FILTERS
-
-//   const handleReset = () => {
-//     setFilters({
-//       startDate: '',
-//       endDate: '',
-//       customer: null,
-//       farmer: null,
-//     });
-
-//     setReportData(null);
-//   };
-
-//   // ----------------------------------------------------------------------
-
-//   return (
-//     <Stack spacing={3}>
-
-//       <Typography variant="h5">
-//         Reports
-//       </Typography>
-
-//       {/* ================= FILTER CARD ================= */}
-
-//       <Card sx={{ p: 3 }}>
-//         <Grid container spacing={2}>
-
-//           {/* From Date */}
-//           <Grid item xs={12} md={3}>
-//             <TextField
-//               fullWidth
-//               type="date"
-//               label="From Date"
-//               InputLabelProps={{ shrink: true }}
-//               value={filters.startDate}
-//               onChange={(e) => handleChange('startDate', e.target.value)}
-//             />
-//           </Grid>
-
-//           {/* To Date */}
-//           <Grid item xs={12} md={3}>
-//             <TextField
-//               fullWidth
-//               type="date"
-//               label="To Date"
-//               InputLabelProps={{ shrink: true }}
-//               value={filters.endDate}
-//               onChange={(e) => handleChange('endDate', e.target.value)}
-//             />
-//           </Grid>
-
-//           {/* Customer */}
-//           <Grid item xs={12} md={3}>
-//             <Autocomplete
-//               options={customers}
-//               loading={loading}
-//               value={filters.customer}
-//               getOptionLabel={(option) => option.name || ''}
-//               onChange={(e, value) => handleChange('customer', value)}
-//               renderInput={(params) => (
-//                 <TextField
-//                   {...params}
-//                   label="Customer"
-//                   InputProps={{
-//                     ...params.InputProps,
-//                     endAdornment: (
-//                       <>
-//                         {loading ? <CircularProgress size={18} /> : null}
-//                         {params.InputProps.endAdornment}
-//                       </>
-//                     ),
-//                   }}
-//                 />
-//               )}
-//             />
-//           </Grid>
-
-//           {/* Farmer */}
-//           <Grid item xs={12} md={3}>
-//             <Autocomplete
-//               options={farmers}
-//               loading={loading}
-//               value={filters.farmer}
-//               getOptionLabel={(option) => option.name || ''}
-//               onChange={(e, value) => handleChange('farmer', value)}
-//               renderInput={(params) => (
-//                 <TextField
-//                   {...params}
-//                   label="Farmer"
-//                   InputProps={{
-//                     ...params.InputProps,
-//                     endAdornment: (
-//                       <>
-//                         {loading ? <CircularProgress size={18} /> : null}
-//                         {params.InputProps.endAdornment}
-//                       </>
-//                     ),
-//                   }}
-//                 />
-//               )}
-//             />
-//           </Grid>
-
-//           {/* Buttons */}
-//           <Grid item xs={12}>
-//             <Stack direction="row" spacing={2} justifyContent="flex-end">
-
-//               <Button variant="outlined" onClick={handleReset}>
-//                 Reset
-//               </Button>
-
-//               <Button
-//                 variant="contained"
-//                 onClick={handleSubmit}
-//                 disabled={reportLoading}
-//               >
-//                 Apply Filters
-//               </Button>
-
-//             </Stack>
-//           </Grid>
-
-//         </Grid>
-//       </Card>
-
-//       {/* ================= LOADING ================= */}
-
-//       {reportLoading && (
-//         <Stack alignItems="center" spacing={1}>
-//           <CircularProgress />
-//           <Typography variant="caption">
-//             Loading Report...
-//           </Typography>
-//         </Stack>
-//       )}
-
-//       {/* ================= REPORT SUMMARY ================= */}
-
-//       {reportData && !reportLoading && (
-//         <Card sx={{ p: 3 }}>
-
-//           <Typography variant="subtitle1" mb={2}>
-//             Report Summary
-//           </Typography>
-
-//           <Grid container spacing={2}>
-
-//             <Grid item xs={12} md={3}>
-//               <Typography variant="body2">
-//                 <b>Total Sales</b>
-//               </Typography>
-//               <Typography>
-//                 ₹ {Number(reportData.summary.total_sales).toLocaleString()}
-//               </Typography>
-//             </Grid>
-
-//             <Grid item xs={12} md={3}>
-//               <Typography variant="body2">
-//                 <b>Cash Received</b>
-//               </Typography>
-//               <Typography>
-//                 ₹ {Number(reportData.summary.cash_received).toLocaleString()}
-//               </Typography>
-//             </Grid>
-
-//             <Grid item xs={12} md={3}>
-//               <Typography variant="body2">
-//                 <b>UPI Received</b>
-//               </Typography>
-//               <Typography>
-//                 ₹ {Number(reportData.summary.upi_received).toLocaleString()}
-//               </Typography>
-//             </Grid>
-
-//             <Grid item xs={12} md={3}>
-//               <Typography variant="body2">
-//                 <b>Pending Amount</b>
-//               </Typography>
-//               <Typography color="error">
-//                 ₹ {Number(reportData.summary.pending).toLocaleString()}
-//               </Typography>
-//             </Grid>
-
-//           </Grid>
-
-//         </Card>
-//       )}
-
-//     </Stack>
-//   );
-// }
-
-
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
-
-// ----------------------------------------------------------------------
+// --------------------------------------------------
 
 export default function ReportPage() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const [loading, setLoading] = useState(true);
+  const [reportLoading, setReportLoading] = useState(false);
+
+  const [trips, setTrips] = useState([]);
+  const [customers, setCustomers] = useState([]);
+
+  const [selectedTrip, setSelectedTrip] = useState(null);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+
+  const [sales, setSales] = useState([]);
+
+  // --------------------------------------------------
+  // LOAD DROPDOWNS
+
+  useEffect(() => {
+    loadDropdownData();
+  }, []);
+
+  const loadDropdownData = async () => {
+    try {
+      setLoading(true);
+
+      const [tripRes, customerRes] = await Promise.all([
+        getallTrips(),
+        getallCustomer(),
+      ]);
+
+      const closedTrips = (tripRes || []).filter(
+        (trip) => trip.status === 'CLOSED'
+      );
+
+      setTrips(closedTrips);
+      setCustomers(customerRes || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --------------------------------------------------
+  // DATE DECIDER
+
+  const getSaleDate = (sale) => {
+    if (selectedTrip) return formatDate(sale.created_at);
+    if (selectedCustomer) return formatDate(sale.sale_date);
+    return '-';
+  };
+
+  // --------------------------------------------------
+  // TRIP SELECT
+
+  const handleTripChange = async (trip) => {
+    setSelectedTrip(trip);
+    setSelectedCustomer(null);
+    setSales([]);
+
+    if (!trip) return;
+
+    try {
+      setReportLoading(true);
+      const data = await getTripSales(trip.id);
+      setSales(data || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  // --------------------------------------------------
+  // CUSTOMER SELECT
+
+  const handleCustomerChange = async (customer) => {
+    setSelectedCustomer(customer);
+    setSelectedTrip(null);
+    setSales([]);
+
+    if (!customer) return;
+
+    try {
+      setReportLoading(true);
+      const data = await getCustomerSales(customer.id);
+      setSales(data || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const handleReset = () => {
+    setSelectedTrip(null);
+    setSelectedCustomer(null);
+    setSales([]);
+  };
+
+  // --------------------------------------------------
+
   return (
-    <Stack
-      sx={{
-        minHeight: '60vh',
-      }}
-      alignItems="center"
-      justifyContent="center"
-      spacing={1}
-    >
-      <Typography variant="h4">📊 Reports</Typography>
+    <Stack spacing={3}>
+      <Typography variant="h5">Reports</Typography>
 
-      <Typography variant="subtitle1" color="text.secondary">
-        Coming Soon
-      </Typography>
+      {/* DROPDOWNS */}
+      <Card sx={{ p: 3 }}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <Autocomplete
+              options={trips}
+              loading={loading}
+              value={selectedTrip}
+              isOptionEqualToValue={(o, v) => o.id === v.id}
+              getOptionLabel={(o) =>
+                o ? `Trip #${o.id} • ${o.farmer_name}` : ''
+              }
+              onChange={(e, v) => handleTripChange(v)}
+              renderInput={(params) => (
+                <TextField {...params} label="Select Trip" />
+              )}
+            />
+          </Grid>
 
-      <Typography variant="caption" color="text.disabled">
-        This section is under development
-      </Typography>
+          <Grid item xs={12} md={6}>
+            <Autocomplete
+              options={customers}
+              loading={loading}
+              value={selectedCustomer}
+              isOptionEqualToValue={(o, v) => o.id === v.id}
+              getOptionLabel={(o) => o?.name || ''}
+              onChange={(e, v) => handleCustomerChange(v)}
+              renderInput={(params) => (
+                <TextField {...params} label="Select Customer" />
+              )}
+            />
+          </Grid>
+
+          <Grid item xs={12}>
+            <Stack direction="row" justifyContent="flex-end">
+              <Button variant="outlined" onClick={handleReset}>
+                Reset
+              </Button>
+            </Stack>
+          </Grid>
+        </Grid>
+      </Card>
+
+      {/* SALES */}
+      {!reportLoading && sales.length > 0 && (
+        <Card sx={{ p: 2 }}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={2}
+          >
+            <Typography variant="subtitle1">Sales</Typography>
+
+            <Button
+              size={isMobile ? 'small' : 'medium'}
+              variant="contained"
+              onClick={() => exportSalesToExcel(sales)}
+            >
+              Export to Excel
+            </Button>
+          </Stack>
+
+          {!isMobile && (
+            <>
+              <Grid container spacing={1} sx={{ fontWeight: 600 }}>
+                <Grid item xs={2}>Customer</Grid>
+                <Grid item xs={1}>Type</Grid>
+                <Grid item xs={1}>Birds</Grid>
+                <Grid item xs={1}>Weight</Grid>
+                <Grid item xs={1}>Rate</Grid>
+                  <Grid item xs={2}>Total</Grid>
+                  <Grid item xs={1}>Pay</Grid>
+                <Grid item xs={1}>Cash</Grid>
+                <Grid item xs={1}>UPI</Grid>
+                <Grid item xs={1}>Date</Grid>
+              </Grid>
+
+              {sales.map((sale) => (
+                <Grid
+                  container
+                  spacing={1}
+                  key={sale.id}
+                  sx={{ py: 1, borderBottom: '1px solid #eee' }}
+                >
+                  <Grid item xs={2}>{sale.customer_name}</Grid>
+                  <Grid item xs={1}>{sale.sell_type}</Grid>
+                  <Grid item xs={1}>{sale.bird_count}</Grid>
+                  <Grid item xs={1}>{sale.weight}</Grid>
+                  <Grid item xs={1}>₹{sale.rate}</Grid>
+                  <Grid item xs={2}>₹{sale.total_amount}</Grid>
+                  <Grid item xs={1}>{sale.payment_mode}</Grid>
+                  <Grid item xs={1}>₹{sale.cash_amount}</Grid>
+                  <Grid item xs={1}>₹{sale.upi_amount}</Grid>
+                  <Grid item xs={1}>{getSaleDate(sale)}</Grid>
+                </Grid>
+              ))}
+            </>
+          )}
+
+          {isMobile && (
+            <Stack spacing={2}>
+              {sales.map((sale) => (
+                <Card key={sale.id} variant="outlined" sx={{ p: 2 }}>
+                  <Stack spacing={0.5}>
+                    <Typography fontWeight={600}>
+                      {sale.customer_name}
+                    </Typography>
+                    <Typography variant="body2">
+                      Type: {sale.sell_type}
+                    </Typography>
+                    <Typography variant="body2">
+                      Birds: {sale.bird_count} | Weight: {sale.weight} kg
+                    </Typography>
+                    <Typography fontWeight={600}>
+                      Total: ₹{sale.total_amount}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {getSaleDate(sale)}
+                    </Typography>
+                  </Stack>
+                </Card>
+              ))}
+            </Stack>
+          )}
+        </Card>
+      )}
     </Stack>
   );
 }
