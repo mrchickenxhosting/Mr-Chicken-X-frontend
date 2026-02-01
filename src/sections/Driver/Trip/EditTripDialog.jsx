@@ -41,6 +41,7 @@ export default function EditTripDialog({
 
   // ----------------------------------------------------------------------
   // FETCH FARMERS & DRIVERS WHEN DIALOG OPENS
+  
 
   useEffect(() => {
     if (!open) return;
@@ -92,6 +93,22 @@ export default function EditTripDialog({
 
   // ----------------------------------------------------------------------
 
+  const resetForm = () => {
+  setFarmer(null);
+  setDriver(null);
+  setDate(null);
+  setBirds('');
+  setTime('');
+  setContactName('');
+  setContactPhone('');
+};
+
+const handleClose = () => {
+  resetForm();
+  onClose();
+};
+
+
   const handleSave = () => {
     const payload = {
       ...(isEditMode && { id: trip.id }),
@@ -114,6 +131,12 @@ export default function EditTripDialog({
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
   });
+
+  useEffect(() => {
+  if (open && !trip) {
+    resetForm();
+  }
+}, [open, trip]);
 
 
   // ----------------------------------------------------------------------
@@ -276,7 +299,7 @@ export default function EditTripDialog({
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose} color="inherit">
+        <Button onClick={handleClose} color="inherit">
           Cancel
         </Button>
 
