@@ -1,77 +1,252 @@
 import PropTypes from 'prop-types';
 import { useState, useEffect } from 'react';
 
-import Stack from '@mui/material/Stack';
-import Dialog from '@mui/material/Dialog';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
+import {
+  Box,
+  Grid,
+  Stack,
+  Switch,
+  Dialog,
+  Button,
+  Checkbox,
+  TextField,
+  Typography,
+  DialogTitle,
+  ToggleButton,
+  DialogActions,
+  DialogContent,
+  FormControlLabel,
+  ToggleButtonGroup,
+} from '@mui/material';
+
 
 export default function EditCustomerDialog({ open, onClose, customer, onSave }) {
-  const [name, setName] = useState('');
-  const [mobile, setMobile] = useState('');
-  const [credit_limit, setCredit_Limit] = useState('');
-
   const isEditMode = Boolean(customer);
 
-useEffect(() => {
-  if (customer) {
-    setName(customer.name || '');
-    setMobile(customer.mobile || '');
-    setCredit_Limit(customer.credit_limit || '');
-  } else {
-    setName('');
-    setMobile('');
-    setCredit_Limit('');
-  }
-}, [customer, open]);
+  const [form, setForm] = useState({
+    name: '',
+    shop_name: '',
+    mobile: '',
+    alternate_mobile: '',
+    city: '',
+    address: '',
+    has_outstanding: false,
+    opening_balance: '',
+    outstanding_reason: '',
+    customer_type: 'GREEN',
+    has_credit_limit: true,
+    credit_limit: '',
+    credit_days: 7,
+    block_on_limit: true,
+    payment_mode: 'CASH',
+    upi_number: '',
+  });
 
+  useEffect(() => {
+    if (customer) {
+      setForm((prev) => ({
+        ...prev,
+        ...customer,
+      }));
+    }
+  }, [customer, open]);
+  const handleChange = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
 
   const handleSave = () => {
     const payload = {
-      ...(isEditMode && { id: customer.id }), // optional
-      name,
-      mobile,
-      credit_limit,
+      ...(isEditMode && { id: customer.id }),
+      ...form,
     };
-
-    console.log(isEditMode ? 'Update Customer Payload:' : 'Create Customer Payload:', payload);
-
     onSave(payload);
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>
-        {isEditMode ? 'Update Customer' : 'Add Customer'}
+        {isEditMode ? 'Update Customer' : 'Register Customer'}
       </DialogTitle>
 
       <DialogContent>
-        <Stack spacing={2} mt={1}>
-          <TextField
-            label="Customer Name"
-            fullWidth
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+        <Stack spacing={3} mt={1}>
 
-          <TextField
-            label="Mobile Number"
-            fullWidth
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value)}
-            inputProps={{ maxLength: 10 }}
-          />
+          {/* ---------- BASIC DETAILS ---------- */}
+          <Box>
+            <Typography variant="subtitle1" fontWeight={600}>
+              1. Basic Customer Details
+            </Typography>
 
-          <TextField
-            label="Credit Limit"
-            fullWidth
-            value={credit_limit}
-            onChange={(e) => setCredit_Limit(e.target.value)}
-            inputProps={{ maxLength: 10 }}
-          />
+            <Grid container spacing={2} mt={1}>
+              <Grid item xs={12} md={6}>
+                <TextField label="Customer Name" fullWidth value={form.name}
+                  onChange={(e) => handleChange('name', e.target.value)} />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField label="Shop / Business Name" fullWidth value={form.shop_name}
+                  onChange={(e) => handleChange('shop_name', e.target.value)} />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField label="Primary Mobile" fullWidth
+                  inputProps={{ maxLength: 10 }}
+                  value={form.mobile}
+                  onChange={(e) => handleChange('mobile', e.target.value)} />
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField label="Alternate Mobile" fullWidth
+                  inputProps={{ maxLength: 10 }}
+                  value={form.alternate_mobile}
+                  onChange={(e) => handleChange('alternate_mobile', e.target.value)} />
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <TextField label="Area / City" fullWidth value={form.city}
+                  onChange={(e) => handleChange('city', e.target.value)} />
+              </Grid>
+
+              <Grid item xs={12} md={8}>
+                <TextField label="Full Delivery Address" fullWidth multiline rows={2}
+                  value={form.address}
+                  onChange={(e) => handleChange('address', e.target.value)} />
+              </Grid>
+            </Grid>
+
+          </Box>
+
+          {/* ---------- CREDIT & OUTSTANDING ---------- */}
+          <Box>
+            <Typography variant="subtitle1" fontWeight={600} mt={3}>
+              2. Credit & Outstanding
+            </Typography>
+
+            <Grid container spacing={2} mt={1}>
+              <Grid item xs={12} md={4}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={form.has_outstanding}
+                      onChange={(e) => handleChange('has_outstanding', e.target.checked)}
+                    />
+                  }
+                  label="Previous Outstanding"
+                />
+              </Grid>
+
+              {form.has_outstanding && (
+                <>
+                  <Grid item xs={12} md={4}>
+                    <TextField label="Opening Balance (₹)" fullWidth
+                      value={form.opening_balance}
+                      onChange={(e) => handleChange('opening_balance', e.target.value)} />
+                  </Grid>
+
+                  <Grid item xs={12} md={4}>
+                    <TextField label="Outstanding Reason" fullWidth
+                      value={form.outstanding_reason}
+                      onChange={(e) => handleChange('outstanding_reason', e.target.value)} />
+                  </Grid>
+                </>
+              )}
+
+              <Grid item xs={12}>
+                <ToggleButtonGroup
+                  fullWidth
+                  value={form.customer_type}
+                  exclusive
+                  onChange={(_, val) => val && handleChange('customer_type', val)}
+                >
+                  <ToggleButton value="GREEN" color="success">
+                    Green – Credit Allowed
+                  </ToggleButton>
+                  <ToggleButton value="ORANGE" color="warning">
+                    Orange – Bill to Bill
+                  </ToggleButton>
+                  <ToggleButton value="RED" color="error">
+                    Red – Advance Only
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={form.has_credit_limit}
+                      onChange={(e) => handleChange('has_credit_limit', e.target.checked)}
+                    />
+                  }
+                  label="Credit Limit"
+                />
+              </Grid>
+
+              {form.has_credit_limit && (
+                <>
+                  <Grid item xs={12} md={4}>
+                    <TextField label="Max Credit Limit (₹)" fullWidth
+                      value={form.credit_limit}
+                      onChange={(e) => handleChange('credit_limit', e.target.value)} />
+                  </Grid>
+
+                  <Grid item xs={12} md={4}>
+                    <TextField label="Credit Days" fullWidth
+                      value={form.credit_days}
+                      onChange={(e) => handleChange('credit_days', e.target.value)} />
+                  </Grid>
+                </>
+              )}
+
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={form.block_on_limit}
+                      onChange={(e) => handleChange('block_on_limit', e.target.checked)}
+                    />
+                  }
+                  label="Block sales if limit exceeded"
+                />
+              </Grid>
+            </Grid>
+
+          </Box>
+
+          {/* ---------- PAYMENT ---------- */}
+          <Box>
+            <Typography variant="subtitle1" fontWeight={600} mt={3}>
+              3. Payment Preferences
+            </Typography>
+
+            <Grid container spacing={2} mt={1}>
+              <Grid item xs={12}>
+                <ToggleButtonGroup
+                  fullWidth
+                  value={form.payment_mode}
+                  exclusive
+                  onChange={(_, val) => val && handleChange('payment_mode', val)}
+                >
+                  <ToggleButton value="CASH">Cash</ToggleButton>
+                  <ToggleButton value="UPI">UPI</ToggleButton>
+                  <ToggleButton value="BANK">Bank Transfer</ToggleButton>
+                </ToggleButtonGroup>
+              </Grid>
+
+              {form.payment_mode === 'UPI' && (
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="UPI Number (Optional)"
+                    fullWidth
+                    value={form.upi_number}
+                    onChange={(e) => handleChange('upi_number', e.target.value)}
+                  />
+                </Grid>
+              )}
+            </Grid>
+
+          </Box>
+
         </Stack>
       </DialogContent>
 
@@ -80,7 +255,7 @@ useEffect(() => {
           Cancel
         </Button>
         <Button onClick={handleSave} variant="contained">
-          {isEditMode ? 'Update' : 'Add'}
+          {isEditMode ? 'Update' : 'Save & Register'}
         </Button>
       </DialogActions>
     </Dialog>

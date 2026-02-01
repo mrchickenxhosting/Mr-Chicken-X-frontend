@@ -104,18 +104,10 @@ export default function CustomerMasterPage() {
     try {
       if (!selectedCustomer) {
         // ➕ ADD CUSTOMER
-        await createCustomer({
-          name: payload.name,
-          mobile: payload.mobile,
-          credit_limit: payload.credit_limit,
-        });
+        await createCustomer(payload);
       } else {
         // ✏️ UPDATE CUSTOMER
-        await UpdateCustomer(selectedCustomer.id, {
-          name: payload.name,
-          mobile: payload.mobile,
-          credit_limit: payload.credit_limit,
-        });
+        await UpdateCustomer(selectedCustomer.id, payload);
       }
 
       setOpenDialog(false);
@@ -124,6 +116,7 @@ export default function CustomerMasterPage() {
       console.error('Customer save failed', error);
     }
   };
+
 
   const handleDeleteCustomer = async (customerId) => {
     try {
@@ -190,13 +183,15 @@ export default function CustomerMasterPage() {
                   onRequestSort={handleSort}
                   onSelectAllClick={handleSelectAllClick}
                   headLabel={[
+                    { id: 'customer_code', label: 'Customer Code' },
                     { id: 'name', label: 'Name' },
+                    { id: 'shop_name', label: 'Shop Name' },
                     { id: 'mobile', label: 'Mobile No.' },
-                    { id: 'address', label: 'Limit' },
-                    { id: 'payment_status', label: 'Payment Status' },
-                      { id: 'status', label: 'Status' },
-
-                    { id: '' },
+                    { id: 'city', label: 'City' },
+                    { id: 'outstanding', label: 'Outstanding (₹)' },
+                    { id: 'customer_type', label: 'Type' },
+                    { id: 'status', label: 'Status' },
+                    { id: 'actions', label: '' }, // actions menu
                   ]}
                 />
 

@@ -30,11 +30,12 @@ export default function UserTableRow({
     setOpen(null);
   };
 
-  const paymentStatusColor = (status) => {
-    switch (status) {
+  // customer credit type color
+  const customerTypeColor = (type) => {
+    switch (type) {
       case 'GREEN':
         return 'success';
-      case 'YELLOW':
+      case 'ORANGE':
         return 'warning';
       case 'RED':
         return 'error';
@@ -43,31 +44,81 @@ export default function UserTableRow({
     }
   };
 
-  const isActive = row.status; // 👈 customer enable/disable status
+  const isActive = row.status;
 
   return (
     <>
       <TableRow
         hover
         tabIndex={-1}
-        sx={{
-          opacity: isActive ? 1 : 0.6, // muted if disabled
-        }}
+        sx={{ opacity: isActive ? 1 : 0.5 }}
       >
+        {/* CUSTOMER CODE */}
+        <TableCell>
+          <Label variant="soft">{row.customer_code}</Label>
+        </TableCell>
+
+        {/* CUSTOMER NAME */}
         <TableCell>{row.name}</TableCell>
 
-        <TableCell>{row.mobile}</TableCell>
+        {/* SHOP NAME */}
+        <TableCell>{row.shop_name || '-'}</TableCell>
 
-        <TableCell>{row.credit_limit}</TableCell>
+        {/* MOBILE */}
+<TableCell>
+  <div style={{ lineHeight: 1.4 }}>
+    <strong>{row.mobile}</strong>
 
-        {/* PAYMENT STATUS */}
+    {row.alternate_mobile && (
+      <div
+        style={{
+          fontSize: '0.75rem',
+          color: '#6b7280',
+          marginTop: 2,
+        }}
+      >
+        Alt: {row.alternate_mobile}
+      </div>
+    )}
+  </div>
+</TableCell>
+        {/* CITY */}
         <TableCell>
-          <Label color={paymentStatusColor(row.payment_status)}>
-            {row.payment_status}
+  <div style={{ lineHeight: 1.4 }}>
+    <strong>{row.city || '-'}</strong>
+
+    {row.address && (
+      <div
+        style={{
+          fontSize: '0.75rem',
+          color: '#6b7280', // MUI grey-ish
+          marginTop: 2,
+        }}
+      >
+        {row.address}
+      </div>
+    )}
+  </div>
+</TableCell>
+
+
+        {/* OUTSTANDING */}
+        <TableCell>
+          <Label
+            color={Number(row.outstanding) > 0 ? 'error' : 'success'}
+          >
+            ₹ {row.outstanding}
           </Label>
         </TableCell>
 
-        {/* CUSTOMER STATUS */}
+        {/* CUSTOMER TYPE */}
+        <TableCell>
+          <Label color={customerTypeColor(row.customer_type)}>
+            {row.customer_type}
+          </Label>
+        </TableCell>
+
+        {/* STATUS */}
         <TableCell>
           <Chip
             label={isActive ? 'Active' : 'Disabled'}
@@ -77,6 +128,7 @@ export default function UserTableRow({
           />
         </TableCell>
 
+        {/* ACTIONS */}
         <TableCell align="right">
           <IconButton onClick={handleOpenMenu}>
             <Iconify icon="eva:more-vertical-fill" />
