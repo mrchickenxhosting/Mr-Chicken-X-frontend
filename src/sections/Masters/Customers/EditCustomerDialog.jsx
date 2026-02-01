@@ -15,6 +15,7 @@ import {
   ToggleButton,
   DialogActions,
   DialogContent,
+  InputAdornment,
   FormControlLabel,
   ToggleButtonGroup,
 } from '@mui/material';
@@ -89,18 +90,52 @@ export default function EditCustomerDialog({ open, onClose, customer, onSave }) 
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <TextField label="Primary Mobile" fullWidth
-                  inputProps={{ maxLength: 10 }}
+                <TextField
+                  label="Primary Mobile"
+                  fullWidth
                   value={form.mobile}
-                  onChange={(e) => handleChange('mobile', e.target.value)} />
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    handleChange('mobile', val);
+                  }}
+                  inputProps={{
+                    maxLength: 10,
+                    inputMode: 'numeric',
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        +91
+                      </InputAdornment>
+                    ),
+                  }}
+                />
               </Grid>
 
+
               <Grid item xs={12} md={6}>
-                <TextField label="Alternate Mobile" fullWidth
-                  inputProps={{ maxLength: 10 }}
-                  value={form.alternate_mobile}
-                  onChange={(e) => handleChange('alternate_mobile', e.target.value)} />
+                <TextField
+                  label="Primary Mobile"
+                  fullWidth
+                  value={form.mobile}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    handleChange('mobile', val);
+                  }}
+                  inputProps={{
+                    maxLength: 10,
+                    inputMode: 'numeric',
+                  }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        +91
+                      </InputAdornment>
+                    ),
+                  }}
+                />
               </Grid>
+
 
               <Grid item xs={12} md={4}>
                 <TextField label="Area / City" fullWidth value={form.city}
