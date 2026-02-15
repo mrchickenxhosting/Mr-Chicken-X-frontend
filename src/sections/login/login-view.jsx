@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import Box from '@mui/material/Box';
-import Link from '@mui/material/Link';
+// import Link from '@mui/material/Link';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
@@ -97,9 +97,9 @@ const handleLogin = async () => {
         justifyContent="flex-end"
         sx={{ my: 3 }}
       >
-        <Link variant="subtitle2" underline="hover">
+        {/* <Link variant="subtitle2" underline="hover">
           Forgot password?
-        </Link>
+        </Link> */}
       </Stack>
 
       <LoadingButton
