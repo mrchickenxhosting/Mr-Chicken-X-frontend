@@ -32,9 +32,12 @@ export default function LoginView() {
   const [showPassword, setShowPassword] = useState(false);
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
 const handleLogin = async () => {
   try {
+    setLoading(true); // start loading
+
     const res = await api.post('/auth/login', {
       mobile, // reuse email field as mobile
       password,
@@ -49,6 +52,8 @@ const handleLogin = async () => {
     router.replace(redirectTo);
   } catch (error) {
     alert(error.response?.data?.message || 'Login failed');
+  }finally {
+    setLoading(false); // stop loading always
   }
 };
 
@@ -103,6 +108,7 @@ const handleLogin = async () => {
         variant="contained"
         color="inherit"
         onClick={handleLogin}
+        loading={loading}
       >
         Login
       </LoadingButton>
