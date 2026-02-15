@@ -7,6 +7,7 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import Popover from '@mui/material/Popover';
+import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -30,7 +31,7 @@ export default function UserCard({
   const [openDialog, setOpenDialog] = useState(false);
 
   const isActive = row.status;
-  const hasCoords = row.latitude && row.longitude;
+  const farms = row.farms || [];
 
   return (
     <Card
@@ -41,34 +42,85 @@ export default function UserCard({
     >
       <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
         {/* LEFT CONTENT */}
-        <Stack spacing={0.5}>
+        <Stack spacing={0.8}>
           <Typography variant="subtitle1">{row.name}</Typography>
 
           <Typography variant="body2" color="text.secondary">
             📞 {row.mobile}
           </Typography>
 
-          {/* LOCATION + MAP PIN */}
-          <Stack direction="row" spacing={1} alignItems="center">
+          {/* FARMS */}
+          {farms.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              📍 {row.location || '-'}
+              📍 -
             </Typography>
+          ) : (
+            <>
+              {/* First Farm */}
+              <Stack direction="row" spacing={1} alignItems="center">
+                {farms[0].latitude && farms[0].longitude ? (
+                  <Typography
+                    variant="body2"
+                    component="a"
+                    href={`https://www.google.com/maps?q=${farms[0].latitude},${farms[0].longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{
+                      color: 'primary.main',
+                      textDecoration: 'none',
+                      cursor: 'pointer',
+                      '&:hover': { textDecoration: 'underline' },
+                    }}
+                  >
+                    📍 {farms[0].name || farms[0].location}
+                  </Typography>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    📍 {farms[0].name || farms[0].location}
+                  </Typography>
+                )}
+              </Stack>
 
-            {hasCoords && (
-              <IconButton
-                size="small"
-                onClick={() =>
-                  window.open(
-                    `https://www.google.com/maps?q=${row.latitude},${row.longitude}`,
-                    '_blank'
-                  )
-                }
-                title="View on map"
-              >
-                <Iconify icon="eva:pin-fill" width={18} />
-              </IconButton>
-            )}
-          </Stack>
+              {/* Multiple Farms */}
+              {farms.length > 1 && (
+                <Tooltip
+                  title={
+                    <Stack spacing={0.5}>
+                      {farms.slice(1).map((farm) => (
+                        <div key={farm.id}>
+                          {farm.latitude && farm.longitude ? (
+                            <a
+                              href={`https://www.google.com/maps?q=${farm.latitude},${farm.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                color: '#1976d2',
+                                textDecoration: 'none',
+                              }}
+                            >
+                              {farm.name || farm.location}
+                            </a>
+                          ) : (
+                            <span>{farm.name || farm.location}</span>
+                          )}
+                        </div>
+                      ))}
+                    </Stack>
+                  }
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      cursor: 'pointer',
+                      color: 'primary.main',
+                    }}
+                  >
+                    +{farms.length - 1} more
+                  </Typography>
+                </Tooltip>
+              )}
+            </>
+          )}
 
           {/* STATUS */}
           <Chip

@@ -101,34 +101,32 @@ export default function FarmerMasterPage() {
     }
   };
 
-  const handleSaveFarmer = async (payload) => {
-    try {
-      if (!selectedFarmer) {
-        // ➕ ADD FARMER
-        await createFarmer({
-          name: payload.name,
-          mobile: payload.mobile,
-          location: payload.location,
-          latitude: payload.latitude,
-          longitude: payload.longitude,
-        });
-      } else {
-        // ✏️ UPDATE FARMER
-        await UpdateFarmer(selectedFarmer.id, {
-          name: payload.name,
-          mobile: payload.mobile,
-          location: payload.location,
-          latitude: payload.latitude,
-          longitude: payload.longitude,
-        });
-      }
-
-      setOpenDialog(false);
-      fetchFarmers();
-    } catch (error) {
-      console.error('Farmer save failed', error);
+const handleSaveFarmer = async (payload) => {
+  try {
+    if (!selectedFarmer) {
+      // ➕ CREATE FARMER
+      await createFarmer({
+        name: payload.name,
+        mobile: payload.mobile,
+        farms: payload.farms,
+      });
+    } else {
+      // ✏️ UPDATE FARMER
+      await UpdateFarmer(selectedFarmer.id, {
+        name: payload.name,
+        mobile: payload.mobile,
+        farms: payload.farms,
+      });
     }
-  };
+
+    setOpenDialog(false);
+    fetchFarmers();
+
+  } catch (error) {
+    console.error('Farmer save failed', error);
+  }
+};
+
 
   const handleDeleteFarmer = async (farmerId) => {
     try {

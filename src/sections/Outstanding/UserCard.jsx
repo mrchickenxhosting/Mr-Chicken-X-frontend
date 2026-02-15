@@ -74,8 +74,8 @@ export default function CustomerOutstandingCard({
               {row.name}
             </Typography>
 
-            <Label variant="soft" color={statusColor(row.status)}>
-              {row.status}
+            <Label color={statusColor(row.customer_type)}>
+              {row.customer_type}
             </Label>
           </Stack>
 
@@ -153,6 +153,7 @@ CustomerOutstandingCard.propTypes = {
     mobile: PropTypes.string,
     outstanding: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     status: PropTypes.string,
+    customer_type: PropTypes.string,
   }),
   onCreditChange: PropTypes.func,
 };

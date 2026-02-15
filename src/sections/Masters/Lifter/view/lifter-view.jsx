@@ -13,11 +13,11 @@ import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
 
 import {
-  createDriver,
-  getallDriver,
-  UpdateDriver,
-  deleteDriver,
-  disableDriver,
+  createLifter,
+  getallLifter,
+  UpdateLifter,
+  deleteLifter,
+  disableLifter,
 } from 'src/services/Trader.service';
 
 import Iconify from 'src/components/iconify';
@@ -28,13 +28,13 @@ import TableNoData from '../table-no-data';
 import UserTableRow from '../user-table-row';
 import UserTableHead from '../user-table-head';
 import TableEmptyRows from '../table-empty-rows';
-import EditDriverDialog from '../EditDriverDialog';
+import EditDriverDialog from '../EditLifterDialog';
 import UserTableToolbar from '../user-table-toolbar';
 import { emptyRows, applyFilter, getComparator } from '../utils';
 
 // ----------------------------------------------------------------------
 
-export default function DriverMasterPage() {
+export default function LifterMasterPage() {
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
   const [selected, setSelected] = useState([]);
@@ -111,7 +111,7 @@ export default function DriverMasterPage() {
 
   const fetchDrivers = async () => {
     try {
-      const data = await getallDriver();
+      const data = await getallLifter();
       setDrivers(data);
     } catch (error) {
       console.error('Failed to fetch traders', error);
@@ -122,14 +122,14 @@ export default function DriverMasterPage() {
     try {
       if (!selectedDriver) {
         // ➕ ADD DRIVER
-        await createDriver({
+        await createLifter({
           name: payload.name,
           mobile: payload.mobile,
           password: '1234',
         });
       } else {
         // ✏️ UPDATE DRIVER
-        await UpdateDriver(selectedDriver.id, {
+        await UpdateLifter(selectedDriver.id, {
           name: payload.name,
           mobile: payload.mobile,
         });
@@ -145,7 +145,7 @@ export default function DriverMasterPage() {
 
   const handleDeleteDriver = async (driverId) => {
     try {
-      await deleteDriver(driverId);
+      await deleteLifter(driverId);
       fetchDrivers();
     } catch (error) {
       console.error('Delete driver failed', error);
@@ -154,7 +154,7 @@ export default function DriverMasterPage() {
 
   const handleDisableDriver = async (driverId) => {
     try {
-      await disableDriver(driverId, false);
+      await disableLifter(driverId, false);
       fetchDrivers();
     } catch (error) {
       console.error('Disable driver failed', error);
@@ -163,7 +163,7 @@ export default function DriverMasterPage() {
 
   const handleEnableDriver = async (driverId) => {
     try {
-      await disableDriver(driverId, true);
+      await disableLifter(driverId, true);
       fetchDrivers();
     } catch (error) {
       console.error('Enable driver failed', error);
@@ -173,7 +173,7 @@ export default function DriverMasterPage() {
   return (
     <Container maxWidth="xxl">
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-        <Typography variant="h4">Delivery Patner</Typography>
+        <Typography variant="h4">Lifter</Typography>
 
         {!isMobile && (<Button
           variant="contained"
@@ -184,7 +184,7 @@ export default function DriverMasterPage() {
             setOpenDialog(true);
           }}
         >
-          New Delivery Patner
+          New Lifter
         </Button>)}
       </Stack>
 

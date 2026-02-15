@@ -25,7 +25,8 @@ const navConfig = [
     roles: ['TRADER', 'MANAGER'],
     children: [
       { title: 'Managers', path: '/user/managers', roles: ['TRADER'] },
-      { title: 'Drivers', path: '/user/drivers', roles: ['TRADER', 'MANAGER'] },
+      { title: 'Delivery Patner', path: '/user/drivers', roles: ['TRADER', 'MANAGER'] },
+      { title: 'Lifter', path: '/user/lifter', roles: ['TRADER', 'MANAGER'] },
       { title: 'Customers', path: '/user/customers', roles: ['TRADER', 'MANAGER'] },
       { title: 'Farmers', path: '/user/farmers', roles: ['TRADER', 'MANAGER'] },
     ],
@@ -77,7 +78,7 @@ const navConfig = [
     title: 'Lifting',
     path: '/lifting',
     icon: icon('ic_loading'),
-    roles: ['DRIVER'],
+    roles: ['DRIVER','LIFTER'],
   },
   {
     title: 'Sales',

@@ -13,6 +13,7 @@ export const ManagerPage = lazy(() => import('src/pages/Masters/managers'));
 export const DriverPage = lazy(() => import('src/pages/Masters/drivers'));
 export const CustomerPage = lazy(() => import('src/pages/Masters/customers'));
 export const FarmerPage = lazy(() => import('src/pages/Masters/farmers'));
+export const LifterPage = lazy(() => import('src/pages/Masters/lifter'))
 
 export const OutstandingPage = lazy(() => import('src/pages/outstanding'));
 
@@ -52,6 +53,7 @@ export default function Router() {
         { path: 'user/drivers', element: <DriverPage /> },
         { path: 'user/customers', element: <CustomerPage /> },
         { path: 'user/farmers', element: <FarmerPage /> },
+        { path: 'user/lifter', element: <LifterPage /> },
 
         // Outstanding
         { path: 'outstanding', element: <OutstandingPage /> },

@@ -147,6 +147,7 @@ export default function CustomerOutstandingPage() {
                       <UserTableRow
                         row={row}
                         onCreditConfirm={handleCreditChange}
+                        fetchCustomers={fetchCustomers}
                       />
                     ))}
 

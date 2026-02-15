@@ -21,6 +21,7 @@ export default function TripTableRow({
   onDelete,
   onClose,
 }) {
+  console.log(row)
   const [open, setOpen] = useState(null);
 
   const handleOpenMenu = (event) => {
@@ -46,7 +47,51 @@ export default function TripTableRow({
   return null;
 };
 
-  const generateTripWhatsAppMessage = () => `
+const generateTripWhatsAppMessage = () => `
+🚚 *ટ્રિપ વિગત*
+
+📅 તારીખ: ${
+  row.trip_date
+    ? new Date(row.trip_date).toLocaleDateString('en-IN')
+    : '-'
+}
+⏰ સમય: ${row.trip_time || '-'}
+
+📍 સ્થળ: ${row.farm_location || '-'}
+
+${
+  getGoogleMapLink()
+    ? `🗺️ નકશામાં ખોલો: ${getGoogleMapLink()}`
+    : ''
+}
+
+👨‍🌾 ખેડૂત: ${row.farmer_name || '-'}
+📞 ખેડૂત સંપર્ક: ${row.farmer_mobile || '-'}
+
+🚛 ડ્રાઈવર: ${row.driver_name || '-'}
+📞 ડ્રાઈવર સંપર્ક: ${row.driver_mobile || '-'}
+
+${
+  row.lifter_name
+    ? `🧍 લિફ્ટર: ${row.lifter_name}
+📞 લિફ્ટર સંપર્ક: ${row.lifter_mobile}`
+    : ''
+}
+
+${
+  row.contact_name
+    ? `👤 સંપર્ક વ્યક્તિ: ${row.contact_name}
+📞 સંપર્ક નંબર: ${row.contact_phone}`
+    : ''
+}
+
+🐔 કુલ પક્ષીઓ: ${row.total_birds}
+
+કૃપા કરીને સમયસર પહોંચો અને લોડિંગ પછી સ્ટેટસ અપડેટ કરો.
+
+— Dispatch Team
+
+
 🚚 *Trip Details*
 
 📅 Date: ${
@@ -56,15 +101,26 @@ export default function TripTableRow({
 }
 ⏰ Time: ${row.trip_time || '-'}
 
-📍 Location: ${row.farmer_location || '-'}
+📍 Location: ${row.farm_location || '-'}
 
 ${
   getGoogleMapLink()
     ? `🗺️ Open in Maps: ${getGoogleMapLink()}`
     : ''
 }
+
 👨‍🌾 Farmer: ${row.farmer_name || '-'}
 📞 Farmer Contact: ${row.farmer_mobile || '-'}
+
+🚛 Driver: ${row.driver_name || '-'}
+📞 Driver Contact: ${row.driver_mobile || '-'}
+
+${
+  row.lifter_name
+    ? `🧍 Lifter: ${row.lifter_name}
+📞 Lifter Contact: ${row.lifter_mobile}`
+    : ''
+}
 
 ${
   row.contact_name
@@ -79,6 +135,7 @@ Please reach on time and update status after loading.
 
 — Dispatch Team
 `;
+
 
   const handleWhatsAppClick = () => {
     if (!row.driver_mobile) return;
@@ -119,16 +176,46 @@ Please reach on time and update status after loading.
 
         <TableCell>{row.trip_time || '-'}</TableCell>
 
-        <TableCell>
-          <Stack spacing={0.3}>
-            <Typography variant="subtitle2">
-              {row.farmer_name || '-'}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {row.farmer_mobile || ''}
-            </Typography>
-          </Stack>
-        </TableCell>
+<TableCell>
+  <Stack spacing={0.3}>
+    <Typography variant="subtitle2">
+      {row.farmer_name || '-'}
+    </Typography>
+
+    <Typography variant="caption" color="text.secondary">
+      📞 {row.farmer_mobile || ''}
+    </Typography>
+
+{row.farm_location && (
+  row.farm_latitude && row.farm_longitude ? (
+    <Typography
+      component="a"
+      href={`https://www.google.com/maps?q=${row.farm_latitude},${row.farm_longitude}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      variant="caption"
+      color="primary"
+      sx={{
+        display: 'block',
+        maxWidth: 180,
+        textDecoration: 'none',
+      }}
+    >
+      📍 {row.farm_location}
+    </Typography>
+  ) : (
+    <Typography
+      variant="caption"
+      color="text.secondary"
+      sx={{ display: 'block', maxWidth: 180 }}
+    >
+      📍 {row.farm_location}
+    </Typography>
+  )
+)}
+
+  </Stack>
+</TableCell>
 
         <TableCell>
           <Stack spacing={0.3}>
@@ -137,6 +224,17 @@ Please reach on time and update status after loading.
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {row.driver_mobile || ''}
+            </Typography>
+          </Stack>
+        </TableCell>
+
+                <TableCell>
+          <Stack spacing={0.3}>
+            <Typography variant="subtitle2">
+              {row.lifter_name || '-'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {row.lifter_mobile || ''}
             </Typography>
           </Stack>
         </TableCell>

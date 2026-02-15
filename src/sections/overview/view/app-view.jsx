@@ -71,14 +71,15 @@ const paymentSplitChart = paymentSplit.map((item) => ({
 
 
   // ================= TRIP STATUS TIMELINE =================
-  const tripStatusTimeline = tripStatus.map((item, index) => ({
-    id: `${index}`,
-    title: `${item.count} Trip(s) ${item.status}`,
-    type: `order${index + 1}`,
-    time: new Date(),
-  }));
+const tripStatusTimeline = tripStatus.map((item, index) => ({
+  id: `${index}`,
+  title: `${item.count} Trip(s) ${item.status}`,
+  type: `order${index + 1}`,
+  time: item.action_time ? new Date(item.action_time) : null,
+}));
 
-  console.log("Active Trips:", summary.active_trips, typeof summary.active_trips);
+
+  console.log("Active Trips:", tripStatus);
 
 
   // ================= RENDER =================

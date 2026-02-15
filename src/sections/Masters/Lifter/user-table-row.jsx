@@ -2,14 +2,11 @@ import { useState } from 'react';
 import PropTypes from 'prop-types';
 
 import Chip from '@mui/material/Chip';
-import Stack from '@mui/material/Stack';
 import Popover from '@mui/material/Popover';
-import Tooltip from '@mui/material/Tooltip';
 import TableRow from '@mui/material/TableRow';
 import MenuItem from '@mui/material/MenuItem';
 import TableCell from '@mui/material/TableCell';
 import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
 
 import Iconify from 'src/components/iconify';
 
@@ -32,8 +29,7 @@ export default function UserTableRow({
     setOpen(null);
   };
 
-  const isActive = row.status;
-  const farms = row.farms || [];
+  const isActive = row.status; // 👈 driver status
 
   return (
     <>
@@ -41,88 +37,14 @@ export default function UserTableRow({
         hover
         tabIndex={-1}
         sx={{
-          opacity: isActive ? 1 : 0.6,
+          opacity: isActive ? 1 : 0.6, // muted when disabled
         }}
       >
         <TableCell>{row.name}</TableCell>
 
         <TableCell>{row.mobile}</TableCell>
 
-        {/* FARMS COLUMN */}
-<TableCell>
-  {farms.length === 0 ? (
-    '-'
-  ) : (
-    <Stack spacing={0.5}>
-      {/* First Farm */}
-      <Stack direction="row" spacing={1} alignItems="center">
-        {farms[0].latitude && farms[0].longitude ? (
-          <Typography
-            variant="body2"
-            component="a"
-            href={`https://www.google.com/maps?q=${farms[0].latitude},${farms[0].longitude}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            sx={{
-              color: 'primary.main',
-              textDecoration: 'none',
-              cursor: 'pointer',
-              '&:hover': { textDecoration: 'underline' },
-            }}
-          >
-            {farms[0].name || farms[0].location}
-          </Typography>
-        ) : (
-          <Typography variant="body2">
-            {farms[0].name || farms[0].location}
-          </Typography>
-        )}
-      </Stack>
-
-      {/* Multiple Farms */}
-      {farms.length > 1 && (
-        <Tooltip
-          title={
-            <Stack spacing={0.5}>
-              {farms.slice(1).map((farm) => (
-                <div key={farm.id}>
-                  {farm.latitude && farm.longitude ? (
-                    <a
-                      href={`https://www.google.com/maps?q=${farm.latitude},${farm.longitude}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        color: '#1976d2',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      {farm.name || farm.location}
-                    </a>
-                  ) : (
-                    <span>{farm.name || farm.location}</span>
-                  )}
-                </div>
-              ))}
-            </Stack>
-          }
-        >
-          <Typography
-            variant="caption"
-            sx={{
-              cursor: 'pointer',
-              color: 'primary.main',
-            }}
-          >
-            +{farms.length - 1} more
-          </Typography>
-        </Tooltip>
-      )}
-    </Stack>
-  )}
-</TableCell>
-
-
-        {/* STATUS */}
+        {/* STATUS CHIP */}
         <TableCell>
           <Chip
             label={isActive ? 'Active' : 'Disabled'}
@@ -132,7 +54,6 @@ export default function UserTableRow({
           />
         </TableCell>
 
-        {/* ACTIONS */}
         <TableCell align="right">
           <IconButton onClick={handleOpenMenu}>
             <Iconify icon="eva:more-vertical-fill" />
@@ -148,6 +69,7 @@ export default function UserTableRow({
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         PaperProps={{ sx: { width: 160 } }}
       >
+        {/* EDIT */}
         <MenuItem
           onClick={() => {
             onEdit(row);
@@ -158,6 +80,7 @@ export default function UserTableRow({
           Edit
         </MenuItem>
 
+        {/* ENABLE / DISABLE */}
         {isActive ? (
           <MenuItem
             onClick={() => {
@@ -182,6 +105,7 @@ export default function UserTableRow({
           </MenuItem>
         )}
 
+        {/* DELETE */}
         <MenuItem
           onClick={() => {
             onDelete();

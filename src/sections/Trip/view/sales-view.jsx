@@ -1,5 +1,5 @@
 import { useTheme } from '@emotion/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
@@ -44,8 +44,16 @@ export default function DaySalesPage() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [selectedTrip, setSelectedTrip] = useState('');
   const [otherExpense, setOtherExpense] = useState('');
+  const [driverExpense, setDriverExpense] = useState('');
+const [purchaseRatePerKg, setPurchaseRatePerKg] = useState('');
   const [dieselExpense, setDieselExpense] = useState('');
   const [openCloseDay, setOpenCloseDay] = useState(false);
+  const [tripSummary, setTripSummary] = useState({
+  collected: 0,
+  sold: 0,
+  remaining: 0,
+});
+
 
 
   const theme = useTheme();
@@ -87,20 +95,43 @@ export default function DaySalesPage() {
     }
   };
 
-  useEffect(() => {
-    if (!selectedTrip) return;
-    fetchSales(selectedTrip);
-  }, [selectedTrip]);
 
-  const fetchSales = async (tripId) => {
-    try {
-      const data = await getTripSales(tripId);
-      console.log(data)
-      setSales(data);
-    } catch (err) {
-      console.error('Failed to fetch sales', err);
-    }
-  };
+
+const fetchSales = useCallback(async (tripId) => {
+  try {
+    const data = await getTripSales(tripId);
+    setSales(data);
+
+    // 🔹 Calculate birds sold (USE correct field)
+    const soldBirds = data.reduce(
+      (sum, sale) => sum + Number(sale.bird_count || 0),
+      0
+    );
+
+    // 🔹 Find selected trip
+    const selectedTripData = trips.find(
+      (t) => Number(t.id) === Number(tripId)
+    );
+
+    const collectedBirds = Number(selectedTripData?.total_birds || 0);
+    const remainingBirds = collectedBirds - soldBirds;
+
+    setTripSummary({
+      collected: collectedBirds,
+      sold: soldBirds,
+      remaining: remainingBirds,
+    });
+
+  } catch (err) {
+    console.error('Failed to fetch sales', err);
+  }
+}, [trips]);
+
+
+useEffect(() => {
+  if (!selectedTrip) return;
+  fetchSales(selectedTrip);
+}, [selectedTrip, fetchSales]);
 
   const handleClick = (event, name) => {
     const selectedIndex = selected.indexOf(name);
@@ -166,6 +197,8 @@ export default function DaySalesPage() {
         tripId: selectedTrip,
         diesel_expense: Number(dieselExpense || 0),
         other_expense: Number(otherExpense || 0),
+      driver_expense: Number(driverExpense || 0),        // ✅ NEW
+      purchase_rate_per_kg: Number(purchaseRatePerKg || 0), // ✅ NEW
       };
 
       console.log('Closing day:', selectedTrip, payload);
@@ -203,6 +236,7 @@ export default function DaySalesPage() {
 
   return (
     <Container maxWidth="xxl">
+      
       <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
         <Typography variant="h4">Sales</Typography>
         <FormControl sx={{ minWidth: 280 }}>
@@ -221,6 +255,29 @@ export default function DaySalesPage() {
         </FormControl>
       </Stack>
 
+{selectedTrip && (
+  <Card sx={{ p: 2, mb: 3 }}>
+    <Stack direction="row" spacing={4} flexWrap="wrap">
+      
+      <Typography variant="subtitle1">
+        Birds Collected: <b>{tripSummary.collected}</b>
+      </Typography>
+
+      <Typography variant="subtitle1">
+        Birds Sold: <b>{tripSummary.sold}</b>
+      </Typography>
+
+      <Typography
+        variant="subtitle1"
+        color={tripSummary.remaining > 0 ? 'error.main' : 'success.main'}
+        fontWeight="bold"
+      >
+        Remaining Birds: {tripSummary.remaining}
+      </Typography>
+
+    </Stack>
+  </Card>
+)}
 
 
       <Card>
@@ -349,6 +406,25 @@ export default function DaySalesPage() {
                 onChange={(e) => setOtherExpense(e.target.value)}
                 InputProps={{ startAdornment: <span>₹&nbsp;</span> }}
               />
+
+               <TextField
+    label="Driver Expense"
+    type="number"
+    fullWidth
+    value={driverExpense}
+    onChange={(e) => setDriverExpense(e.target.value)}
+    InputProps={{ startAdornment: <span>₹&nbsp;</span> }}
+  />
+
+  {/* ✅ NEW - Purchase Rate */}
+  <TextField
+    label="Purchase Rate per KG"
+    type="number"
+    fullWidth
+    value={purchaseRatePerKg}
+    onChange={(e) => setPurchaseRatePerKg(e.target.value)}
+    InputProps={{ startAdornment: <span>₹&nbsp;</span> }}
+  />
             </Stack>
           </DialogContent>
 

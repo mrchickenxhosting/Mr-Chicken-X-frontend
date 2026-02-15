@@ -16,6 +16,7 @@ export default function EditDriverDialog({ open, onClose, driver, onSave }) {
   const isEditMode = Boolean(driver);
 
   useEffect(() => {
+    if(open){
     if (driver) {
       setName(driver.name || '');
       setMobile(driver.mobile || '');
@@ -23,8 +24,8 @@ export default function EditDriverDialog({ open, onClose, driver, onSave }) {
       // Reset for Add mode
       setName('');
       setMobile('');
-    }
-  }, [driver]);
+    }}
+  }, [driver,open]);
 
   const handleSave = () => {
     const payload = {

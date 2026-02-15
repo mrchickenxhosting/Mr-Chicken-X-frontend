@@ -17,6 +17,8 @@ export const getDefaultRouteByRole = (user) => {
       return '/';
     case 'DRIVER':
       return '/lifting';
+         case 'LIFTER':
+      return '/lifting';
     default:
       return '/login';
   }

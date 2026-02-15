@@ -18,7 +18,8 @@ export default function EditTraderDialog({ open, onClose, trader, onSave }) {
 
   const isEditMode = Boolean(trader);
 
-  useEffect(() => {
+useEffect(() => {
+  if (open) {
     if (trader) {
       setcompany_name(trader.company_name || '');
       setowner_name(trader.owner_name || '');
@@ -30,7 +31,9 @@ export default function EditTraderDialog({ open, onClose, trader, onSave }) {
       setMobile('');
       setUpiId('');
     }
-  }, [trader]);
+  }
+}, [trader, open]);
+
 
 
   const handleSave = () => {

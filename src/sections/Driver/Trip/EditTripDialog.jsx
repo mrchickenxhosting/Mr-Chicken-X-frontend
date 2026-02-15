@@ -1,19 +1,20 @@
 import dayjs from 'dayjs';
 import PropTypes from 'prop-types';
 import { useState, useEffect } from 'react';
-import { Marker,GoogleMap, useJsApiLoader } from '@react-google-maps/api';
+import { Marker, GoogleMap, useJsApiLoader } from '@react-google-maps/api';
 
 import Stack from '@mui/material/Stack';
 import Dialog from '@mui/material/Dialog';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
+import { Grid, Typography } from '@mui/material';
 import DialogTitle from '@mui/material/DialogTitle';
 import Autocomplete from '@mui/material/Autocomplete';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 
-import { getallDriver, getallFarmer } from 'src/services/Trader.service';
+import { getallDriver, getallFarmer, getallLifter } from 'src/services/Trader.service';
 
 // ----------------------------------------------------------------------
 
@@ -27,32 +28,35 @@ export default function EditTripDialog({
 
   const [farmers, setFarmers] = useState([]);
   const [drivers, setDrivers] = useState([]);
+  const [lifters, setLifters] = useState([])
 
   const [farmer, setFarmer] = useState(null);
+  const [farm, setFarm] = useState(null);
   const [driver, setDriver] = useState(null);
+  const [lifter, setLifter] = useState(null);
+
   const [date, setDate] = useState(null);
   const [birds, setBirds] = useState('');
   const [time, setTime] = useState('');
 
-
-  // NEW FIELDS
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
 
   // ----------------------------------------------------------------------
-  // FETCH FARMERS & DRIVERS WHEN DIALOG OPENS
-  
+  // Fetch dropdown data
 
   useEffect(() => {
     if (!open) return;
 
-    const fetchDropdownData = async () => {
+    const fetchData = async () => {
       try {
-        const [farmersRes, driversRes] = await Promise.all([
+        const [farmersRes, driversRes, lifterRes] = await Promise.all([
           getallFarmer(),
           getallDriver(),
+          getallLifter(),
         ]);
 
+        setLifters(lifterRes || []);
         setFarmers(farmersRes || []);
         setDrivers(driversRes || []);
       } catch (error) {
@@ -60,11 +64,11 @@ export default function EditTripDialog({
       }
     };
 
-    fetchDropdownData();
+    fetchData();
   }, [open]);
 
   // ----------------------------------------------------------------------
-  // PREFILL DATA IN EDIT MODE
+  // Prefill in edit mode
 
   useEffect(() => {
     if (!trip || !farmers.length || !drivers.length) return;
@@ -73,58 +77,65 @@ export default function EditTripDialog({
       (f) => f.id === trip.farmer_id
     );
 
+    const selectedFarm = selectedFarmer?.farms?.find(
+      (fa) => fa.id === trip.farm_id
+    );
+
     const selectedDriver = drivers.find(
       (d) => d.id === trip.driver_id
     );
 
+    const selectedLifter = lifters.find(
+      (d) => d.id === trip.lifter_id
+    );
+
     setFarmer(selectedFarmer || null);
+    setFarm(selectedFarm || null);
     setDriver(selectedDriver || null);
+    setLifter(selectedLifter || null);
+
+
     setBirds(trip.total_birds || '');
     setTime(trip.trip_time?.slice(0, 5) || '');
     setDate(trip.trip_date ? dayjs(trip.trip_date) : null);
 
-
-
-    // NEW PREFILL
     setContactName(trip.contact_name || '');
     setContactPhone(trip.contact_phone || '');
-
-  }, [trip, farmers, drivers]);
+  }, [trip, farmers, drivers, lifters]);
 
   // ----------------------------------------------------------------------
 
   const resetForm = () => {
-  setFarmer(null);
-  setDriver(null);
-  setDate(null);
-  setBirds('');
-  setTime('');
-  setContactName('');
-  setContactPhone('');
-};
+    setFarmer(null);
+    setFarm(null);
+    setDriver(null);
+    setLifter(null);
+    setDate(null);
+    setBirds('');
+    setTime('');
+    setContactName('');
+    setContactPhone('');
+  };
 
-const handleClose = () => {
-  resetForm();
-  onClose();
-};
-
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   const handleSave = () => {
     const payload = {
       ...(isEditMode && { id: trip.id }),
-      farmer_id: farmer.id,
+      farm_id: farm.id,
       driver_id: driver.id,
+      lifter_id: lifter?.id || null,   // ✅ ADD THIS
       total_birds: Number(birds),
       trip_time: time,
-      trip_date: date ? dayjs(date).format('DD-MMM-YYYY') : null,
-
-      // NEW FIELDS
+      trip_date: date ? dayjs(date).format('YYYY-MM-DD') : null,
       contact_name: contactName,
       contact_phone: contactPhone,
     };
 
     console.log('Trip Payload:', payload);
-
     onSave(payload);
   };
 
@@ -132,65 +143,90 @@ const handleClose = () => {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
   });
 
-  useEffect(() => {
-  if (open && !trip) {
-    resetForm();
-  }
-}, [open, trip]);
-
-
-  // ----------------------------------------------------------------------
-
   const isSaveDisabled =
     !farmer ||
+    !farm ||
     !driver ||
     !birds ||
     !time ||
     (contactPhone && contactPhone.length !== 10);
 
+  const farmerFarms = farmer?.farms || [];
+
   // ----------------------------------------------------------------------
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
       <DialogTitle>
         {isEditMode ? 'Update Trip' : 'Create Trip'}
       </DialogTitle>
 
-      <DialogContent>
-        <Stack spacing={2} mt={1}>
+      <DialogContent dividers>
+        <Stack spacing={4} mt={1}>
 
-          {/* ================= FARMER ================= */}
+          {/* ================= FARMER SECTION ================= */}
+          <Stack spacing={2}>
+            <Typography variant="subtitle1" fontWeight={600}>
+              Farmer Information
+            </Typography>
 
-          <Autocomplete
-            options={farmers}
-            value={farmer}
-            onChange={(e, value) => setFarmer(value)}
-            getOptionLabel={(option) => option.name || ''}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderInput={(params) => (
-              <TextField {...params} label="Select Farmer" />
-            )}
-          />
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Autocomplete
+                  options={farmers}
+                  value={farmer}
+                  onChange={(e, value) => {
+                    setFarmer(value);
+                    if (value?.farms?.length === 1) {
+                      setFarm(value.farms[0]);
+                    } else {
+                      setFarm(null);
+                    }
+                  }}
+                  getOptionLabel={(option) => option.name || ''}
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value.id
+                  }
+                  renderInput={(params) => (
+                    <TextField {...params} label="Select Farmer" fullWidth />
+                  )}
+                />
+              </Grid>
 
-          <TextField
-            label="Farmer Mobile"
-            value={farmer?.mobile || ''}
-            disabled
-            fullWidth
-          />
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Farmer Mobile"
+                  value={farmer?.mobile || ''}
+                  disabled
+                  fullWidth
+                />
+              </Grid>
 
-          <TextField
-            label="Location"
-            value={farmer?.location || ''}
-            disabled
-            fullWidth
-          />
+              {farmer && (
+                <Grid item xs={12}>
+                  <Autocomplete
+                    options={farmerFarms}
+                    value={farm}
+                    onChange={(e, value) => setFarm(value)}
+                    getOptionLabel={(option) => option.location || ''}
+                    isOptionEqualToValue={(option, value) =>
+                      option.id === value.id
+                    }
+                    renderInput={(params) => (
+                      <TextField {...params} label="Select Farm" fullWidth />
+                    )}
+                  />
+                </Grid>
+              )}
+            </Grid>
+          </Stack>
 
-          {isLoaded && farmer?.latitude && farmer?.longitude && (
+          {/* ================= MAP SECTION ================= */}
+          {isLoaded && farm?.latitude && farm?.longitude && (
             <Stack
               sx={{
                 height: 220,
-                borderRadius: 1,
+                borderRadius: 2,
                 overflow: 'hidden',
                 border: '1px solid',
                 borderColor: 'divider',
@@ -199,8 +235,8 @@ const handleClose = () => {
               <GoogleMap
                 mapContainerStyle={{ width: '100%', height: '100%' }}
                 center={{
-                  lat: Number(farmer.latitude),
-                  lng: Number(farmer.longitude),
+                  lat: Number(farm.latitude),
+                  lng: Number(farm.longitude),
                 }}
                 zoom={14}
                 options={{
@@ -214,89 +250,147 @@ const handleClose = () => {
               >
                 <Marker
                   position={{
-                    lat: Number(farmer.latitude),
-                    lng: Number(farmer.longitude),
+                    lat: Number(farm.latitude),
+                    lng: Number(farm.longitude),
                   }}
                 />
               </GoogleMap>
             </Stack>
           )}
 
+          {/* ================= CONTACT SECTION ================= */}
+          <Stack spacing={2}>
+            <Typography variant="subtitle1" fontWeight={600}>
+              Contact Details
+            </Typography>
 
-          {/* ================= CONTACT PERSON ================= */}
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Contact Person Name"
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  fullWidth
+                />
+              </Grid>
 
-          <TextField
-            label="Contact Person Name"
-            fullWidth
-            value={contactName}
-            onChange={(e) => setContactName(e.target.value)}
-          />
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Contact Person Phone"
+                  value={contactPhone}
+                  onChange={(e) =>
+                    setContactPhone(e.target.value.replace(/\D/g, ''))
+                  }
+                  inputProps={{ maxLength: 10 }}
+                  helperText="Optional (10 digit mobile number)"
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+          </Stack>
 
-          <TextField
-            label="Contact Person Phone"
-            fullWidth
-            value={contactPhone}
-            onChange={(e) =>
-              setContactPhone(e.target.value.replace(/\D/g, ''))
-            }
-            inputProps={{ maxLength: 10 }}
-            helperText="Optional (10 digit mobile number)"
-          />
+          {/* ================= TEAM SECTION ================= */}
+          <Stack spacing={2}>
+            <Typography variant="subtitle1" fontWeight={600}>
+              Assign Team
+            </Typography>
 
-          {/* ================= DRIVER ================= */}
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={4}>
+                <Autocomplete
+                  options={drivers}
+                  value={driver}
+                  onChange={(e, value) => setDriver(value)}
+                  getOptionLabel={(option) => option.name || ''}
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value.id
+                  }
+                  renderInput={(params) => (
+                    <TextField {...params} label="Select Delivery Partner" fullWidth />
+                  )}
+                />
+              </Grid>
 
-          <Autocomplete
-            options={drivers}
-            value={driver}
-            onChange={(e, value) => setDriver(value)}
-            getOptionLabel={(option) => option.name || ''}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderInput={(params) => (
-              <TextField {...params} label="Select Driver" />
-            )}
-          />
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  label="Delivery Partner Mobile"
+                  value={driver?.mobile || ''}
+                  disabled
+                  fullWidth
+                />
+              </Grid>
 
-          <TextField
-            label="Driver Mobile"
-            value={driver?.mobile || ''}
-            disabled
-            fullWidth
-          />
+              <Grid item xs={12} sm={4}>
+                <Autocomplete
+                  options={lifters}
+                  value={lifter}
+                  onChange={(e, value) => setLifter(value)}
+                  getOptionLabel={(option) => option.name || ''}
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value.id
+                  }
+                  renderInput={(params) => (
+                    <TextField {...params} label="Select Lifter" fullWidth />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  label="Lifter Mobile"
+                  value={lifter?.mobile || ''}
+                  disabled
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+          </Stack>
 
           {/* ================= TRIP DETAILS ================= */}
+          <Stack spacing={2}>
+            <Typography variant="subtitle1" fontWeight={600}>
+              Trip Details
+            </Typography>
 
-          <TextField
-            label="Number of Birds"
-            type="number"
-            fullWidth
-            value={birds}
-            onChange={(e) => setBirds(e.target.value)}
-          />
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  label="Number of Birds"
+                  type="number"
+                  value={birds}
+                  onChange={(e) => setBirds(e.target.value)}
+                  fullWidth
+                />
+              </Grid>
 
-          <DatePicker
-            label="Trip Date"
-            value={date}
-            onChange={(newValue) => setDate(newValue)}
-            minDate={dayjs()}
-            slotProps={{
-              textField: {
-                fullWidth: true,
-              },
-            }}
-          />
+              <Grid item xs={12} sm={4}>
+                <DatePicker
+                  label="Trip Date"
+                  value={date}
+                  onChange={(newValue) => setDate(newValue)}
+                  minDate={dayjs()}
+                  slotProps={{
+                    textField: { fullWidth: true },
+                  }}
+                />
+              </Grid>
 
-
-          <TextField
-            label="Trip Time"
-            type="time"
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-          />
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  label="Trip Time"
+                  type="time"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+          </Stack>
 
         </Stack>
       </DialogContent>
+
 
       <DialogActions>
         <Button onClick={handleClose} color="inherit">
@@ -314,8 +408,6 @@ const handleClose = () => {
     </Dialog>
   );
 }
-
-// ----------------------------------------------------------------------
 
 EditTripDialog.propTypes = {
   open: PropTypes.bool,

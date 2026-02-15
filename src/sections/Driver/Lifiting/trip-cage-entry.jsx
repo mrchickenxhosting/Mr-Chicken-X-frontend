@@ -15,7 +15,7 @@ import {
   DialogContent,
 } from '@mui/material';
 
-import { UpdateFarmer } from 'src/services/Trader.service';
+import { updateFarmLocation } from 'src/services/Trader.service';
 import {
   resetCage,
   getTripCages,
@@ -68,10 +68,10 @@ export default function TripCageEntry() {
   });
 
 
-  
-    const { isLoaded } = useJsApiLoader({
-      googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
-    });
+
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
+  });
   // ----------------------------------------------------------------------
   // LOAD ASSIGNED TRIPS
 
@@ -129,7 +129,8 @@ export default function TripCageEntry() {
 
   const selectColor = (color) => {
     setSelectedColor(color);
-    const entry = cageData[selectedCage]?.[color]?.at(-1);
+const colorEntries = cageData[selectedCage]?.[color] || [];
+const entry = colorEntries[colorEntries.length - 1];
     setForm(entry || { chickens: '', weight: '' });
   };
 
@@ -210,10 +211,12 @@ export default function TripCageEntry() {
 
   const saveUpdatedLocation = async () => {
     try {
-      await UpdateFarmer(trip.farmer_id, {
+      await updateFarmLocation(trip.farm_id, {
         latitude: coords.lat,
         longitude: coords.lng,
       });
+
+
 
       alert('✅ Farmer location updated successfully');
       setOpenLocationDialog(false);
@@ -267,20 +270,6 @@ export default function TripCageEntry() {
     { chickens: 0, weight: 0 }
   );
 
-  const getCageBgColor = (cage) => {
-    if (!cage) return 'background.neutral';
-
-    // Highest priority: post-lift state
-    if (isLifted) return 'warning.light';
-
-    // Color-based priority
-    if (cage.RED?.length) return 'error.light';
-    if (cage.BLUE?.length) return 'info.light';
-    if (cage.BLACK?.length) return 'grey.700';
-
-    // Default filled cage
-    return 'success.light';
-  };
 
   // ----------------------------------------------------------------------
 
@@ -320,12 +309,57 @@ export default function TripCageEntry() {
                   sx={{
                     height: 110,
                     cursor: 'pointer',
-                    bgcolor: getCageBgColor(cage),
+                    bgcolor: cage ? 'success.light' : 'background.neutral',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    position: 'relative',
                   }}
                 >
+                  {/* COLOR DOTS */}
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    sx={{
+                      position: 'absolute',
+                      top: 6,
+                      right: 6,
+                    }}
+                  >
+                    {cage?.RED?.length > 0 && (
+                      <Stack
+                        sx={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          bgcolor: 'error.main',
+                        }}
+                      />
+                    )}
+
+                    {cage?.BLUE?.length > 0 && (
+                      <Stack
+                        sx={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          bgcolor: 'info.main',
+                        }}
+                      />
+                    )}
+
+                    {cage?.BLACK?.length > 0 && (
+                      <Stack
+                        sx={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          bgcolor: 'grey.800',
+                        }}
+                      />
+                    )}
+                  </Stack>
+ 
                   <Stack alignItems="center" spacing={0.3}>
                     <Typography variant="subtitle2">#{cageNo}</Typography>
                     {cage && (
@@ -429,7 +463,7 @@ export default function TripCageEntry() {
         </DialogActions>
       </Dialog>
 
-<Dialog open={openLocationDialog} onClose={() => setOpenLocationDialog(false)} fullWidth maxWidth="md">
+      <Dialog open={openLocationDialog} onClose={() => setOpenLocationDialog(false)} fullWidth maxWidth="md">
         <DialogTitle>Update Farmer Location</DialogTitle>
 
         <DialogContent sx={{ height: 450 }}>
@@ -458,33 +492,6 @@ export default function TripCageEntry() {
         </DialogActions>
       </Dialog>
 
-      {/* CAGE ENTRY DIALOG */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Cage #{selectedCage}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2}>
-            <TextField
-              label="Birds"
-              type="number"
-              value={form.chickens}
-              onChange={(e) => setForm({ ...form, chickens: e.target.value })}
-            />
-            <TextField
-              label="Weight (kg)"
-              type="number"
-              value={form.weight}
-              onChange={(e) => setForm({ ...form, weight: e.target.value })}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave}>
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-      
     </Stack>
   );
 }

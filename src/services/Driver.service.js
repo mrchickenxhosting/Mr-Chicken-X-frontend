@@ -58,7 +58,7 @@ export const getTripCages = async (tripId) => {
 export const sellToCustomer = async ({
   tripId,
   customer_id,
-  cage_number,
+  cage_numbers,   // ✅ ARRAY now
   sell_type,
   bird_count,
   weight,
@@ -72,13 +72,13 @@ export const sellToCustomer = async ({
     `driver/trips/${tripId}/sell`,
     {
       customer_id,
-      cage_number,
-      sell_type,        // FULL | HALF | CUSTOM
+      cage_numbers,   // ✅ send array
+      sell_type,
       bird_count,
       weight,
       rate,
       total_amount,
-      payment_mode,     // CASH | UPI | BOTH
+      payment_mode,
       cash_amount,
       upi_amount,
     }

@@ -9,33 +9,32 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 
-export default function EditManagerDialog({ open, onClose, manager, onSave }) {
+export default function EditDriverDialog({ open, onClose, driver, onSave }) {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
 
-  const isEditMode = Boolean(manager);
+  const isEditMode = Boolean(driver);
 
-useEffect(() => {
-  if (open) {
-    if (manager) {
-      setName(manager.name || '');
-      setMobile(manager.mobile || '');
+  useEffect(() => {
+    if(open){
+    if (driver) {
+      setName(driver.name || '');
+      setMobile(driver.mobile || '');
     } else {
+      // Reset for Add mode
       setName('');
       setMobile('');
-    }
-  }
-}, [manager, open]);
-
+    }}
+  }, [driver,open]);
 
   const handleSave = () => {
     const payload = {
-      ...(isEditMode && { id: manager.id }), // optional
+      ...(isEditMode && { id: driver.id }), // optional
       name,
       mobile,
     };
 
-    console.log(isEditMode ? 'Update Manager Payload:' : 'Create Manager Payload:', payload);
+    console.log(isEditMode ? 'Update Driver Payload:' : 'Create Driver Payload:', payload);
 
     onSave(payload);
   };
@@ -43,13 +42,13 @@ useEffect(() => {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>
-        {isEditMode ? 'Update Manager' : 'Add Manager'}
+        {isEditMode ? 'Update Lifter' : 'Add Lifter'}
       </DialogTitle>
 
       <DialogContent>
         <Stack spacing={2} mt={1}>
           <TextField
-            label="Manager Name"
+            label="Lifter Name"
             fullWidth
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -77,9 +76,9 @@ useEffect(() => {
   );
 }
 
-EditManagerDialog.propTypes = {
+EditDriverDialog.propTypes = {
   open: PropTypes.bool,
   onClose: PropTypes.func,
   onSave: PropTypes.func,
-  manager: PropTypes.object,
+  driver: PropTypes.object,
 };

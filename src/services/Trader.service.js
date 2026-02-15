@@ -1,66 +1,77 @@
-  import axios from '../utils/axios';
+import axios from '../utils/axios';
 
-  // ===================Dashboard Data ===========================
+// ===================Dashboard Data ===========================
 
-  export const getDashboardData = async () => {
-    const response = await axios.get('trader/dashboard');
-    return response.data;
-  }
+export const getDashboardData = async () => {
+  const response = await axios.get('trader/dashboard');
+  return response.data;
+}
 
-  // =================== Managers, Drivers, Customers, Farmers  Masters===========================
-  export const getallManager = async () => {
-    const response = await axios.get('trader/managers');
-    return response.data;
-  };
+// =================== Managers, Drivers, Customers, Farmers  Masters===========================
+export const getallManager = async () => {
+  const response = await axios.get('trader/managers');
+  return response.data;
+};
 
-  export const getallDriver = async () => {
-    const response = await axios.get('trader/drivers');
-    return response.data;
-  };
+export const getallDriver = async () => {
+  const response = await axios.get('trader/drivers');
+  return response.data;
+};
 
-  export const getallCustomer = async () => {
-    const response = await axios.get('trader/customers');
-    return response.data;
-  };
-
-  export const getallFarmer = async () => {
-    const response = await axios.get('trader/farmers');
-    return response.data;
-  };
-
-  // =================== Add/Update Managers, Drivers, Customers, Farmers  Masters===========================
+export const getallLifter = async () => {
+  const response = await axios.get('trader/lifters');
+  return response.data;
+};
 
 
-  export const createManager = async (payload) => {
-    const response = await axios.post('trader/managers', payload);
-    return response.data;
-  };
+export const getallCustomer = async () => {
+  const response = await axios.get('trader/customers');
+  return response.data;
+};
 
-  export const createDriver = async (payload) => {
-    const response = await axios.post('trader/drivers', payload);
-    return response.data;
-  }
+export const getallFarmer = async () => {
+  const response = await axios.get('trader/farmers');
+  return response.data;
+};
 
-  export const createCustomer = async (payload) => {
-    const response = await axios.post('trader/customers', payload);
-    return response.data;
-  };
-
-  export const createFarmer = async (payload) => {
-    const response = await axios.post('trader/farmers', payload);
-    return response.data;
-  }
+// =================== Add/Update Managers, Drivers, Customers, Farmers  Masters===========================
 
 
+export const createManager = async (payload) => {
+  const response = await axios.post('trader/managers', payload);
+  return response.data;
+};
 
-  // ========================= Customer Outstanding ============================
+export const createDriver = async (payload) => {
+  const response = await axios.post('trader/drivers', payload);
+  return response.data;
+}
 
-  export const getCustomerOutstanding = async () => {
-    const response = await axios.get('trader/customers/outstanding');
-    return response.data;
-  }
+export const createLifter = async (payload) => {
+  const response = await axios.post('trader/lifters', payload);
+  return response.data;
+}
 
-  export const creditCustomer = async (customerId, amount) => {
+export const createCustomer = async (payload) => {
+  const response = await axios.post('trader/customers', payload);
+  return response.data;
+};
+
+export const createFarmer = async (payload) => {
+  const response = await axios.post('trader/farmers', payload);
+  return response.data;
+}
+
+
+
+// ========================= Customer Outstanding ============================
+
+export const getCustomerOutstanding = async () => {
+  const response = await axios.get('trader/customers/outstanding');
+  return response.data;
+}
+
+export const creditCustomer = async (customerId, amount) => {
   const res = await axios.post(
     `/trader/customers/${customerId}/credit`,
     { amount }
@@ -70,27 +81,27 @@
 
 
 
-  // ======================= Trip Data ===========================
+// ======================= Trip Data ===========================
 
-  export const CreateTrip = async (payload) => {
-    const response = await axios.post('trader/trips', payload);
-    return response.data;
-  }
+export const CreateTrip = async (payload) => {
+  const response = await axios.post('trader/trips', payload);
+  return response.data;
+}
 
-  export const getallTrips = async () => {
-    const response = await axios.get('trader/trips');
-    return response.data;
-  }
+export const getallTrips = async () => {
+  const response = await axios.get('trader/trips');
+  return response.data;
+}
 
-  export const updateTrip = async (tripId, payload) => {
-    const response = await axios.patch(`trader/trips/${tripId}`, payload);
-    return response.data;
-  }
+export const updateTrip = async (tripId, payload) => {
+  const response = await axios.patch(`trader/trips/${tripId}`, payload);
+  return response.data;
+}
 
-  export const deleteTrip = async (tripId) => {
-    const response = await axios.delete(`trader/trips/${tripId}`);
-    return response.data;
-  }
+export const deleteTrip = async (tripId) => {
+  const response = await axios.delete(`trader/trips/${tripId}`);
+  return response.data;
+}
 // ======================= Trip Sales ===========================
 
 export const getTripSales = async (tripId) => {
@@ -104,6 +115,11 @@ export const closeTripDay = async (tripId, payload = {}) => {
     payload
   );
   return response.data;
+};
+
+export const getTripExpenses = async (tripId) => {
+  const res = await axios.get(`trader/trips/${tripId}/expenses`);
+  return res.data;
 };
 
 
@@ -177,6 +193,24 @@ export const disableDriver = async (driverId, status) => {
   return response.data;
 }
 
+export const UpdateLifter = async (lifterId, payload) => {
+  const response = await axios.patch(`trader/lifters/${lifterId}`, payload);
+  return response.data;
+}
+
+export const deleteLifter = async (lifterId) => {
+  const response = await axios.delete(`trader/lifters/${lifterId}`);
+  return response.data;
+}
+
+export const disableLifter = async (lifterId, status) => {
+  const response = await axios.patch(
+    `trader/lifters/${lifterId}/status`,
+    { status }
+  );
+  return response.data;
+}
+
 export const UpdateCustomer = async (customerId, payload) => {
   const response = await axios.patch(`trader/customers/${customerId}`, payload);
   return response.data;
@@ -185,7 +219,7 @@ export const UpdateCustomer = async (customerId, payload) => {
 export const deleteCustomer = async (customerId) => {
   const response = await axios.delete(`trader/customers/${customerId}`);
   return response.data;
-} 
+}
 
 export const disableCustomer = async (customerId, status) => {
   const response = await axios.patch(
@@ -199,6 +233,14 @@ export const UpdateFarmer = async (farmerId, payload) => {
   const response = await axios.patch(`trader/farmers/${farmerId}`, payload);
   return response.data;
 }
+
+export const updateFarmLocation = async (farmId, payload) => {
+  const response = await axios.patch(
+    `/trader/farms/${farmId}/location`,
+    payload
+  );
+  return response.data;
+};
 
 export const deleteFarmer = async (farmerId) => {
   const response = await axios.delete(`trader/farmers/${farmerId}`);

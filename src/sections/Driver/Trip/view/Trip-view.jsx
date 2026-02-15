@@ -99,25 +99,67 @@ export default function DriverTripsPage() {
   // ----------------------------------------------------------------------
   // SAVE TRIP (CREATE / UPDATE)
 
-  const generateTripWhatsAppMessage = (trip) => `
+const generateTripWhatsAppMessage = (trip) => `
+🚚 *ટ્રિપ સોંપવામાં આવી છે*
+
+📅 તારીખ: ${
+  trip.trip_date
+    ? new Date(trip.trip_date).toLocaleDateString('en-IN')
+    : '-'
+}
+⏰ સમય: ${trip.trip_time || '-'}
+
+📍 સ્થળ: ${trip.farm_location || '-'}
+
+👨‍🌾 ખેડૂત: ${trip.farmer_name || '-'}
+📞 ખેડૂત સંપર્ક: ${trip.farmer_mobile || '-'}
+
+🚛 ડ્રાઈવર: ${trip.driver_name || '-'}
+📞 ડ્રાઈવર સંપર્ક: ${trip.driver_mobile || '-'}
+
+🧍 લિફ્ટર: ${trip.lifter_name || '-'}
+📞 લિફ્ટર સંપર્ક: ${trip.lifter_mobile || '-'}
+
+${
+  trip.contact_name
+    ? `👤 સંપર્ક વ્યક્તિ: ${trip.contact_name}
+📞 સંપર્ક નંબર: ${trip.contact_phone}`
+    : ''
+}
+
+🐔 કુલ પક્ષીઓ: ${trip.total_birds}
+
+કૃપા કરીને સમયસર પહોંચો અને લોડિંગ પછી સ્ટેટસ અપડેટ કરો.
+
+— Dispatch Team
+
+
 🚚 *New Trip Assigned*
 
-📅 Date: ${trip.trip_date
-      ? new Date(trip.trip_date).toLocaleDateString('en-IN')
-      : '-'
-    }
+📅 Date: ${
+  trip.trip_date
+    ? new Date(trip.trip_date).toLocaleDateString('en-IN')
+    : '-'
+}
 ⏰ Time: ${trip.trip_time || '-'}
 
-📍 Location: ${trip.farmer_location || '-'}
+📍 Location: ${trip.farm_location || '-'}
 
 👨‍🌾 Farmer: ${trip.farmer_name || '-'}
 📞 Farmer Contact: ${trip.farmer_mobile || '-'}
 
-${trip.contact_name
-      ? `👤 Contact Person: ${trip.contact_name}
+🚛 Driver: ${trip.driver_name || '-'}
+📞 Driver Contact: ${trip.driver_mobile || '-'}
+
+🧍 Lifter: ${trip.lifter_name || '-'}
+📞 Lifter Contact: ${trip.lifter_mobile || '-'}
+
+${
+  trip.contact_name
+    ? `👤 Contact Person: ${trip.contact_name}
 📞 Contact No: ${trip.contact_phone}`
-      : ''
-    }
+    : ''
+}
 
 🐔 Total Birds: ${trip.total_birds}
 
@@ -125,6 +167,7 @@ Please reach on time and update status after loading.
 
 — Dispatch Team
 `;
+
 
   const sendTripWhatsApp = (trip) => {
     if (!trip?.driver_mobile) {
@@ -143,7 +186,6 @@ Please reach on time and update status after loading.
  const handleSaveTrip = async (payload) => {
   try {
     let res;
-
     if (!selectedTrip) {
       res = await CreateTrip(payload);
     } else {
@@ -234,10 +276,11 @@ Please reach on time and update status after loading.
                     { id: 'trip_time', label: 'Time' },
                     { id: 'farmer_name', label: 'Farmer' },
                     { id: 'driver_name', label: 'Driver' },
-                    { id: 'driver_name', label: 'Contact Person' },
+                    { id: 'lifter_name', label: 'Lifter' },
+                    { id: 'contact_person', label: 'Contact Person' },
                     { id: 'total_birds', label: 'Birds' },
                     { id: 'status', label: 'Status' },
-                    { id: 'status', label: 'WhatsApp' },
+                    { id: 'whatsapp', label: 'WhatsApp' },
                     { id: '' },
                   ]}
                 />
