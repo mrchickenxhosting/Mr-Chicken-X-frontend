@@ -43,7 +43,7 @@ const FALLBACK_CENTER = { lat: 23.0225, lng: 72.5714 };
 export default function TripCageEntry() {
   const [trips, setTrips] = useState([]);
   const [trip, setTrip] = useState(null);
-
+  const [saving, setSaving] = useState(false);
   const [selectedCage, setSelectedCage] = useState(null);
   const [selectedColor, setSelectedColor] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
@@ -129,8 +129,8 @@ export default function TripCageEntry() {
 
   const selectColor = (color) => {
     setSelectedColor(color);
-const colorEntries = cageData[selectedCage]?.[color] || [];
-const entry = colorEntries[colorEntries.length - 1];
+    const colorEntries = cageData[selectedCage]?.[color] || [];
+    const entry = colorEntries[colorEntries.length - 1];
     setForm(entry || { chickens: '', weight: '' });
   };
 
@@ -139,7 +139,6 @@ const entry = colorEntries[colorEntries.length - 1];
 
   const handleSave = async () => {
     const color = selectedColor || 'DEFAULT';
-
     const existing = cageData[selectedCage]?.[color]?.at(-1);
 
     // Extra validation ONLY if same color already exists
@@ -155,35 +154,43 @@ const entry = colorEntries[colorEntries.length - 1];
       }
     }
 
-    await addCageEntry({
-      tripId: trip.id,
-      cageNumber: selectedCage,
-      color,
-      bird_count: Number(form.chickens),
-      weight: Number(form.weight),
-      isPostLiftEdit,
-    });
+    try {
+      setSaving(true); // 🔥 START LOADING
 
-    setCageData((prev) => {
-      const cage = prev[selectedCage] || {};
-      const entry = {
-        chickens: Number(form.chickens),
+      await addCageEntry({
+        tripId: trip.id,
+        cageNumber: selectedCage,
+        color,
+        bird_count: Number(form.chickens),
         weight: Number(form.weight),
-      };
+        isPostLiftEdit,
+      });
 
-      return {
-        ...prev,
-        [selectedCage]: {
-          ...cage,
-          [color]:
-            color === 'DEFAULT'
-              ? [entry]
-              : [...(cage[color] || []), entry],
-        },
-      };
-    });
+      setCageData((prev) => {
+        const cage = prev[selectedCage] || {};
+        const entry = {
+          chickens: Number(form.chickens),
+          weight: Number(form.weight),
+        };
 
-    setOpenDialog(false);
+        return {
+          ...prev,
+          [selectedCage]: {
+            ...cage,
+            [color]:
+              color === 'DEFAULT'
+                ? [entry]
+                : [...(cage[color] || []), entry],
+          },
+        };
+      });
+
+      setOpenDialog(false);
+    } catch (err) {
+      alert('❌ Failed to save');
+    } finally {
+      setSaving(false); // 🔥 STOP LOADING
+    }
   };
 
 
@@ -359,7 +366,7 @@ const entry = colorEntries[colorEntries.length - 1];
                       />
                     )}
                   </Stack>
- 
+
                   <Stack alignItems="center" spacing={0.3}>
                     <Typography variant="subtitle2">#{cageNo}</Typography>
                     {cage && (
@@ -456,10 +463,11 @@ const entry = colorEntries[colorEntries.length - 1];
           <Button
             variant="contained"
             onClick={handleSave}
-            disabled={!form.chickens || !form.weight}
+            disabled={!form.chickens || !form.weight || saving}
           >
-            Save
+            {saving ? 'Saving...' : 'Save'}
           </Button>
+
         </DialogActions>
       </Dialog>
 

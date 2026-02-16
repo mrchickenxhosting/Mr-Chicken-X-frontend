@@ -102,14 +102,14 @@ export default function UserTableRow({
 </TableCell>
 
 
-        {/* OUTSTANDING */}
-        <TableCell>
-          <Label
-            color={Number(row.outstanding) > 0 ? 'error' : 'success'}
-          >
-            ₹ {row.outstanding}
-          </Label>
-        </TableCell>
+<TableCell>
+  <Label
+    color={Number(row.outstanding) > 0 ? 'error' : 'success'}
+  >
+    ₹ {Math.round(Number(row.outstanding || 0)).toLocaleString('en-IN')}
+  </Label>
+</TableCell>
+
 
         {/* CUSTOMER TYPE */}
         <TableCell>
