@@ -36,7 +36,6 @@ export default function CustomerOutstandingRow({
 
 
   const generateWhatsAppMessage = () => `
-Dear ${row.name},
 
 પ્રિય ${row.name},
 
@@ -50,6 +49,7 @@ Dear ${row.name},
 
 — ${user.companyName || 'Chicken Supplier'}
 
+Dear ${row.name},
 
 This is a gentle reminder regarding your pending payment.
 
