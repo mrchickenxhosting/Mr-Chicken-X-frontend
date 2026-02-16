@@ -276,7 +276,7 @@ const totalAmount =
                 options={customers}
                 value={customer}
                 onChange={(e, v) => setCustomer(v)}
-                getOptionLabel={(o) => `${o.name} • ${o.mobile}`}
+                getOptionLabel={(o) => `${o.name} • ${o.mobile} • ${o.city}• ${o.outstanding}`}
                 renderInput={(p) => (
                   <TextField {...p} label="Search Customer" />
                 )}
