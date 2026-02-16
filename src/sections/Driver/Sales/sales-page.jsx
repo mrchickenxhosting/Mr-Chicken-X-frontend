@@ -244,7 +244,13 @@ const totalAmount =
                 setTrip(v);
                 setTripLocked(true);
               }}
-              getOptionLabel={(o) => `Trip #${o.id}`}
+              getOptionLabel={(o) => o
+                  ? `Trip #${new Date(o.trip_date).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })}  • ${o.total_birds} birds • ${o.farmer_name}`
+                  : ''}
               renderInput={(p) => <TextField {...p} label="Select Trip" />}
             />
 
@@ -272,15 +278,46 @@ const totalAmount =
           {/* CUSTOMER */}
           {trip && (
             <Card sx={{ p: 2 }}>
-              <Autocomplete
-                options={customers}
-                value={customer}
-                onChange={(e, v) => setCustomer(v)}
-                getOptionLabel={(o) => `${o.name} • ${o.mobile} • ${o.city}• ${o.outstanding}`}
-                renderInput={(p) => (
-                  <TextField {...p} label="Search Customer" />
-                )}
-              />
+<Autocomplete
+  options={customers}
+  value={customer}
+  onChange={(e, v) => setCustomer(v)}
+  getOptionLabel={(o) => o.name || ''}
+  renderOption={(props, option) => (
+    <li {...props}>
+      <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+        
+        {/* Left Side */}
+        <div>
+          <div style={{ fontWeight: 600 }}>{option.name}</div>
+          <div style={{ fontSize: 13, color: '#666' }}>
+            {option.mobile} • {option.city}
+          </div>
+        </div>
+
+        {/* Outstanding Red Box */}
+        {Number(option.outstanding) > 0 && (
+          <div
+            style={{
+              backgroundColor: '#ffe5e5',
+              color: '#d32f2f',
+              padding: '4px 10px',
+              borderRadius: 20,
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            ₹ {Math.round(Number(option.outstanding)).toLocaleString()}
+          </div>
+        )}
+      </div>
+    </li>
+  )}
+  renderInput={(params) => (
+    <TextField {...params} label="Search Customer" />
+  )}
+/>
+
             </Card>
           )}
 
@@ -297,7 +334,7 @@ const totalAmount =
       value={selectedCages}
       onChange={(e, v) => setSelectedCages(v)}
       getOptionLabel={(o) =>
-        `Cage #${o.cage_number} • ${o.remaining_birds} birds`
+        `Cage #${o.cage_number} • ${o.remaining_birds} birds • ${o.remaining_weight} kg`
       }
       getOptionDisabled={(option) =>
         option.remaining_birds <= 0
@@ -310,7 +347,7 @@ const totalAmount =
             pointerEvents: option.remaining_birds <= 0 ? 'none' : 'auto'
           }}
         >
-          Cage #{option.cage_number} • {option.remaining_birds} birds
+          Cage #{option.cage_number} • {option.remaining_birds} birds • {option.remaining_weight} kg
           {option.remaining_birds <= 0 && " (Sold)"}
         </li>
       )}

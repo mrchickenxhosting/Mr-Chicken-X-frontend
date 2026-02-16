@@ -218,25 +218,25 @@ export default function ReportPage() {
       ? ((totalSoldBirds / totalLiftedBirds) * 100).toFixed(1)
       : 0;
 
-      const purchaseRatePerKg = Number(expenses[0]?.purchase_rate_per_kg || 0);
+  const purchaseRatePerKg = Number(expenses[0]?.purchase_rate_per_kg || 0);
 
-// Total cost of lifted birds
-const totalSpent = purchaseRatePerKg * Number(totalWeight || 0);
+  // Total cost of lifted birds
+  const totalSpent = purchaseRatePerKg * Number(totalWeight || 0);
 
-const totalOperationalExpense = expenses.reduce(
-  (sum, exp) =>
-    sum +
-    Number(exp.diesel_expense || 0) +
-    Number(exp.driver_expense || 0) +
-    Number(exp.other_expense || 0),
-  0
-);
+  const totalOperationalExpense = expenses.reduce(
+    (sum, exp) =>
+      sum +
+      Number(exp.diesel_expense || 0) +
+      Number(exp.driver_expense || 0) +
+      Number(exp.other_expense || 0),
+    0
+  );
 
-// Profit or Loss
-const netProfitLoss =
-  subtotal - totalSpent - totalOperationalExpense;
+  // Profit or Loss
+  const netProfitLoss =
+    subtotal - totalSpent - totalOperationalExpense;
 
-console.log(totalSpent,netProfitLoss)
+  console.log(totalSpent, netProfitLoss)
 
 
   return (
@@ -253,7 +253,13 @@ console.log(totalSpent,netProfitLoss)
               value={selectedTrip}
               isOptionEqualToValue={(o, v) => o.id === v.id}
               getOptionLabel={(o) =>
-                o ? `Trip #${o.id} • ${o.farmer_name}` : ''
+                o
+                  ? `Trip #${new Date(o.trip_date).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })} • ${o.driver_name} • ${o.total_birds} birds • ${o.farmer_name}`
+                  : ''
               }
               onChange={(e, v) => handleTripChange(v)}
               renderInput={(params) => (
@@ -398,175 +404,175 @@ console.log(totalSpent,netProfitLoss)
       )}
 
       {/* EXPENSE BREAKDOWN CARD */}
-{selectedTrip && (
-  <Grid container spacing={3} mt={1}>
+      {selectedTrip && (
+        <Grid container spacing={3} mt={1}>
 
-    {/* Expense Card */}
-    <Grid item xs={12} md={6}>
-      <Card
-        sx={{
-          p: 3,
-          borderRadius: 3,
-          boxShadow: 3,
-          background: 'linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%)',
-        }}
-      >
-        <Typography variant="h6" fontWeight={700} mb={2}>
-          Expense Breakdown
-        </Typography>
-
-        {expenses.map((exp) => {
-          const diesel = Number(exp.diesel_expense || 0);
-          const driver = Number(exp.driver_expense || 0);
-          const other = Number(exp.other_expense || 0);
-          const total = diesel + driver + other;
-
-          return (
-            <Grid container spacing={2} key={exp.id}>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Diesel
-                </Typography>
-                <Typography fontWeight={600}>₹{diesel}</Typography>
-              </Grid>
-
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Driver
-                </Typography>
-                <Typography fontWeight={600}>₹{driver}</Typography>
-              </Grid>
-
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Other
-                </Typography>
-                <Typography fontWeight={600}>₹{other}</Typography>
-              </Grid>
-
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Total Expense
-                </Typography>
-                <Typography variant="h6" fontWeight={700}>
-                  ₹{total}
-                </Typography>
-              </Grid>
-            </Grid>
-          );
-        })}
-      </Card>
-    </Grid>
-
-    {/* Trip Analytics Card */}
-    <Grid item xs={12} md={6}>
-      <Card
-        sx={{
-          p: 3,
-          borderRadius: 3,
-          boxShadow: 3,
-          background: 'linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%)',
-        }}
-      >
-        <Typography variant="h6" fontWeight={700} mb={2}>
-          Trip Analytics
-        </Typography>
-
-        <Grid container spacing={2}>
-
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
-              Lifted Birds
-            </Typography>
-            <Typography variant="h6" fontWeight={700}>
-              {totalLiftedBirds}
-            </Typography>
-          </Grid>
-
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
-              Sold Birds
-            </Typography>
-            <Typography variant="h6" fontWeight={700}>
-              {totalSoldBirds}
-            </Typography>
-          </Grid>
-
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
-              Lifted Weight
-            </Typography>
-            <Typography fontWeight={600}>
-              {totalWeight} kg
-            </Typography>
-          </Grid>
-
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
-              Sold Weight
-            </Typography>
-            <Typography fontWeight={600}>
-              {totalSoldWeight.toFixed(2)} kg
-            </Typography>
-          </Grid>
-
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
-              Remaining
-            </Typography>
-            <Typography
-              fontWeight={700}
-              color={remainingBirds < 0 ? 'error.main' : 'text.primary'}
+          {/* Expense Card */}
+          <Grid item xs={12} md={6}>
+            <Card
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                boxShadow: 3,
+                background: 'linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%)',
+              }}
             >
-              {remainingBirds}
-            </Typography>
+              <Typography variant="h6" fontWeight={700} mb={2}>
+                Expense Breakdown
+              </Typography>
+
+              {expenses.map((exp) => {
+                const diesel = Number(exp.diesel_expense || 0);
+                const driver = Number(exp.driver_expense || 0);
+                const other = Number(exp.other_expense || 0);
+                const total = diesel + driver + other;
+
+                return (
+                  <Grid container spacing={2} key={exp.id}>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Diesel
+                      </Typography>
+                      <Typography fontWeight={600}>₹{diesel}</Typography>
+                    </Grid>
+
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Driver
+                      </Typography>
+                      <Typography fontWeight={600}>₹{driver}</Typography>
+                    </Grid>
+
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Other
+                      </Typography>
+                      <Typography fontWeight={600}>₹{other}</Typography>
+                    </Grid>
+
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Total Expense
+                      </Typography>
+                      <Typography variant="h6" fontWeight={700}>
+                        ₹{total}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                );
+              })}
+            </Card>
           </Grid>
 
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
-              Sold %
-            </Typography>
-            <Typography fontWeight={700}>
-              {soldPercentage}%
-            </Typography>
-          </Grid>
-
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
-              Purchase Rate
-            </Typography>
-            <Typography fontWeight={600}>
-              ₹{purchaseRatePerKg}/kg
-            </Typography>
-          </Grid>
-
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
-              Purchase Cost
-            </Typography>
-            <Typography fontWeight={600}>
-              ₹{totalSpent.toFixed(2)}
-            </Typography>
-          </Grid>
-
-          { user?.role === "TRADER" && <Grid item xs={12}>
-            <Typography
-              variant="h5"
-              fontWeight={700}
-              color={netProfitLoss >= 0 ? 'success.main' : 'error.main'}
-              mt={2}
+          {/* Trip Analytics Card */}
+          <Grid item xs={12} md={6}>
+            <Card
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                boxShadow: 3,
+                background: 'linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%)',
+              }}
             >
-              {netProfitLoss >= 0 ? 'Profit' : 'Loss'}: ₹
-              {netProfitLoss.toFixed(2)}
-            </Typography>
-          </Grid>}
+              <Typography variant="h6" fontWeight={700} mb={2}>
+                Trip Analytics
+              </Typography>
+
+              <Grid container spacing={2}>
+
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Lifted Birds
+                  </Typography>
+                  <Typography variant="h6" fontWeight={700}>
+                    {totalLiftedBirds}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Sold Birds
+                  </Typography>
+                  <Typography variant="h6" fontWeight={700}>
+                    {totalSoldBirds}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Lifted Weight
+                  </Typography>
+                  <Typography fontWeight={600}>
+                    {totalWeight} kg
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Sold Weight
+                  </Typography>
+                  <Typography fontWeight={600}>
+                    {totalSoldWeight.toFixed(2)} kg
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Remaining
+                  </Typography>
+                  <Typography
+                    fontWeight={700}
+                    color={remainingBirds < 0 ? 'error.main' : 'text.primary'}
+                  >
+                    {remainingBirds}
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Sold %
+                  </Typography>
+                  <Typography fontWeight={700}>
+                    {soldPercentage}%
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Purchase Rate
+                  </Typography>
+                  <Typography fontWeight={600}>
+                    ₹{purchaseRatePerKg}/kg
+                  </Typography>
+                </Grid>
+
+                <Grid item xs={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    Purchase Cost
+                  </Typography>
+                  <Typography fontWeight={600}>
+                    ₹{totalSpent.toFixed(2)}
+                  </Typography>
+                </Grid>
+
+                {user?.role === "TRADER" && <Grid item xs={12}>
+                  <Typography
+                    variant="h5"
+                    fontWeight={700}
+                    color={netProfitLoss >= 0 ? 'success.main' : 'error.main'}
+                    mt={2}
+                  >
+                    {netProfitLoss >= 0 ? 'Profit' : 'Loss'}: ₹
+                    {netProfitLoss.toFixed(2)}
+                  </Typography>
+                </Grid>}
+
+              </Grid>
+            </Card>
+          </Grid>
 
         </Grid>
-      </Card>
-    </Grid>
-
-  </Grid>
-)}
+      )}
 
     </Stack>
   );

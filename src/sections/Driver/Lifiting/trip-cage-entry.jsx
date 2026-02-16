@@ -290,7 +290,15 @@ export default function TripCageEntry() {
           options={trips}
           value={trip}
           onChange={handleTripChange}
-          getOptionLabel={(o) => `Trip #${o.id} • ${o.farmer_name}`}
+          getOptionLabel={(o) =>
+                o
+                  ? `Trip #${new Date(o.trip_date).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })}  • ${o.total_birds} birds • ${o.farmer_name}`
+                  : ''
+              }
           renderInput={(p) => <TextField {...p} label="Select Trip" />}
         />
 
