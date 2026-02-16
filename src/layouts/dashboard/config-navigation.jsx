@@ -53,7 +53,7 @@ const navConfig = [
     title: 'Reports',
     path: '/reports',
     icon: icon('ic_report'),
-    roles: ['TRADER'],
+    roles: ['TRADER','MANAGER'],
   },
 
   // ===== ADMIN =====

@@ -398,7 +398,7 @@ console.log(totalSpent,netProfitLoss)
       )}
 
       {/* EXPENSE BREAKDOWN CARD */}
-{selectedTrip && user?.role === "TRADER" && (
+{selectedTrip && (
   <Grid container spacing={3} mt={1}>
 
     {/* Expense Card */}
@@ -549,7 +549,7 @@ console.log(totalSpent,netProfitLoss)
             </Typography>
           </Grid>
 
-          <Grid item xs={12}>
+          { user?.role === "TRADER" && <Grid item xs={12}>
             <Typography
               variant="h5"
               fontWeight={700}
@@ -559,7 +559,7 @@ console.log(totalSpent,netProfitLoss)
               {netProfitLoss >= 0 ? 'Profit' : 'Loss'}: ₹
               {netProfitLoss.toFixed(2)}
             </Typography>
-          </Grid>
+          </Grid>}
 
         </Grid>
       </Card>
