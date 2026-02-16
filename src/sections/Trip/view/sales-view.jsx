@@ -14,7 +14,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import TableContainer from '@mui/material/TableContainer';
 import TablePagination from '@mui/material/TablePagination';
-import { Select, Button, MenuItem, InputLabel, FormControl, useMediaQuery } from '@mui/material';
+import { Grid, Select, Button, MenuItem, InputLabel, FormControl, useMediaQuery, } from '@mui/material';
 
 import { getPlatformTraders } from 'src/services/platformTrader.service';
 import { getallTrips, closeTripDay, getTripSales } from 'src/services/Trader.service';
@@ -53,6 +53,13 @@ export default function DaySalesPage() {
     sold: 0,
     remaining: 0,
   });
+  const [paymentSummary, setPaymentSummary] = useState({
+    cash: 0,
+    upi: 0,
+    subtotal: 0,
+    notReceived: 0,
+  });
+
 
 
 
@@ -95,20 +102,24 @@ export default function DaySalesPage() {
     }
   };
 
-
+  useEffect(() => {
+    const savedTrip = localStorage.getItem('selectedTripId');
+    if (savedTrip) {
+      setSelectedTrip(savedTrip);
+    }
+  }, []);
 
   const fetchSales = useCallback(async (tripId) => {
     try {
       const data = await getTripSales(tripId);
       setSales(data);
 
-      // 🔹 Calculate birds sold (USE correct field)
+      // 🔹 Birds sold
       const soldBirds = data.reduce(
         (sum, sale) => sum + Number(sale.bird_count || 0),
         0
       );
 
-      // 🔹 Find selected trip
       const selectedTripData = trips.find(
         (t) => Number(t.id) === Number(tripId)
       );
@@ -122,11 +133,35 @@ export default function DaySalesPage() {
         remaining: remainingBirds,
       });
 
+      // ✅ PAYMENT TOTALS CALCULATION
+      const cashTotal = data.reduce(
+        (sum, sale) => sum + Number(sale.cash_amount || 0),
+        0
+      );
+
+      const upiTotal = data.reduce(
+        (sum, sale) => sum + Number(sale.upi_amount || 0),
+        0
+      );
+
+      const subTotal = data.reduce(
+        (sum, sale) => sum + Number(sale.total_amount || 0),
+        0
+      );
+
+      const notReceived = subTotal - (cashTotal + upiTotal);
+
+      setPaymentSummary({
+        cash: cashTotal,
+        upi: upiTotal,
+        subtotal: subTotal,
+        notReceived,
+      });
+
     } catch (err) {
       console.error('Failed to fetch sales', err);
     }
   }, [trips]);
-
 
   useEffect(() => {
     if (!selectedTrip) return;
@@ -173,12 +208,9 @@ export default function DaySalesPage() {
 
   const notFound = !dataFiltered.length && !!filterName;
 
-
   useEffect(() => {
     fetchTraders();
   }, []);
-
-
 
   const fetchTraders = async () => {
     try {
@@ -236,27 +268,72 @@ export default function DaySalesPage() {
   return (
     <Container maxWidth="xxl">
 
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
-        <Typography variant="h4">Sales</Typography>
-        <FormControl sx={{ minWidth: 280 }}>
-          <InputLabel>Select Trip</InputLabel>
-          <Select
-            value={selectedTrip}
-            label="Select Trip"
-            onChange={(e) => setSelectedTrip(e.target.value)}
-          >
-            {trips.map((trip) => (
-              <MenuItem key={trip.id} value={trip.id}>
-                Trip {new Date(trip.trip_date).toLocaleDateString('en-IN', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
-                })} • {trip.driver_name} • {trip.total_birds} birds • {trip.farmer_name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Stack>
+<Stack
+  direction={{ xs: 'column', md: 'row' }}
+  alignItems={{ xs: 'flex-start', md: 'center' }}
+  justifyContent="space-between"
+  spacing={2}
+  mb={4}
+>
+  <Typography variant="h4">Sales</Typography>
+
+  <Stack
+    direction="column"
+    alignItems={{ xs: 'flex-start', md: 'flex-end' }}
+    spacing={1}
+    sx={{ width: { xs: '100%', md: 'auto' } }}
+  >
+    <FormControl
+      fullWidth
+      sx={{ minWidth: { md: 280 } }}
+    >
+      <InputLabel>Select Trip</InputLabel>
+
+      <Select
+        value={selectedTrip}
+        label="Select Trip"
+        disabled={!!selectedTrip}
+        onChange={(e) => {
+          const tripId = e.target.value;
+          setSelectedTrip(tripId);
+          localStorage.setItem('selectedTripId', tripId);
+        }}
+      >
+        {trips.map((trip) => (
+          <MenuItem key={trip.id} value={trip.id}>
+            Trip{' '}
+            {new Date(trip.trip_date).toLocaleDateString('en-IN', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })}{' '}
+            • {trip.driver_name} 
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+
+    {selectedTrip && (
+      <Typography
+        variant="body2"
+        color="error.main"
+        sx={{
+          cursor: 'pointer',
+          fontWeight: 600,
+        }}
+        onClick={() => {
+          setSelectedTrip('');
+          localStorage.removeItem('selectedTripId');
+          setSales([]);
+        }}
+      >
+        Change Trip
+      </Typography>
+    )}
+  </Stack>
+</Stack>
+
+
 
       {selectedTrip && (
         <Card sx={{ p: 2, mb: 3 }}>
@@ -365,22 +442,92 @@ export default function DaySalesPage() {
         />
 
         {selectedTrip && sales.length > 0 && (
-          <Stack
-            direction="row"
-            justifyContent="flex-end"
-            sx={{ p: 2, borderTop: '1px solid #eee' }}
+          <Card
+            sx={{
+              mt: 2,
+              px: 3,
+              py: 2,
+              borderTop: '1px solid #eee',
+              borderRadius: 2,
+              backgroundColor: '#f8f9fa',
+            }}
           >
-            <Button
-              variant="contained"
-              color="success"
-              size="large"
-              onClick={() => setOpenCloseDay(true)}
+            <Grid
+              container
+              spacing={2}
+              alignItems="center"
             >
-              Complete Day
-            </Button>
-          </Stack>
-        )}
+              {/* ===== SUMMARY SECTION ===== */}
+              <Grid item xs={12} md={9}>
+                <Grid container spacing={2}>
+                  <Grid item xs={6} md={3}>
+                    <Typography variant="caption" color="text.secondary">
+                      Cash
+                    </Typography>
+                    <Typography fontWeight={700} color="success.main">
+                      ₹ {paymentSummary.cash.toFixed(2)}
+                    </Typography>
+                  </Grid>
 
+                  <Grid item xs={6} md={3}>
+                    <Typography variant="caption" color="text.secondary">
+                      UPI
+                    </Typography>
+                    <Typography fontWeight={700} color="info.main">
+                      ₹ {paymentSummary.upi.toFixed(2)}
+                    </Typography>
+                  </Grid>
+
+                  <Grid item xs={6} md={3}>
+                    <Typography variant="caption" color="text.secondary">
+                      Subtotal
+                    </Typography>
+                    <Typography fontWeight={700}>
+                      ₹ {paymentSummary.subtotal.toFixed(2)}
+                    </Typography>
+                  </Grid>
+
+                  <Grid item xs={6} md={3}>
+                    <Typography variant="caption" color="text.secondary">
+                      Not Received
+                    </Typography>
+                    <Typography
+                      fontWeight={700}
+                      color={
+                        paymentSummary.notReceived > 0
+                          ? 'error.main'
+                          : 'success.main'
+                      }
+                    >
+                      ₹ {paymentSummary.notReceived.toFixed(2)}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Grid>
+
+              {/* ===== BUTTON SECTION ===== */}
+              <Grid
+                item
+                xs={12}
+                md={3}
+                sx={{
+                  display: 'flex',
+                  justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                }}
+              >
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="large"
+                  fullWidth={false}
+                  onClick={() => setOpenCloseDay(true)}
+                >
+                  Complete Day
+                </Button>
+              </Grid>
+            </Grid>
+          </Card>
+        )}
 
         <Dialog
           open={openCloseDay}
