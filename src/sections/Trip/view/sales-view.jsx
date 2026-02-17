@@ -60,9 +60,6 @@ export default function DaySalesPage() {
     notReceived: 0,
   });
 
-
-
-
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -102,12 +99,12 @@ export default function DaySalesPage() {
     }
   };
 
-  useEffect(() => {
-    const savedTrip = localStorage.getItem('selectedTripId');
-    if (savedTrip) {
-      setSelectedTrip(savedTrip);
-    }
-  }, []);
+  // useEffect(() => {
+  //   const savedTrip = localStorage.getItem('selectedTripId');
+  //   if (savedTrip) {
+  //     setSelectedTrip(savedTrip);
+  //   }
+  // }, []);
 
   const fetchSales = useCallback(async (tripId) => {
     try {
@@ -313,7 +310,7 @@ export default function DaySalesPage() {
       </Select>
     </FormControl>
 
-    {selectedTrip && (
+    {/* {selectedTrip && (
       <Typography
         variant="body2"
         color="error.main"
@@ -329,7 +326,7 @@ export default function DaySalesPage() {
       >
         Change Trip
       </Typography>
-    )}
+    )} */}
   </Stack>
 </Stack>
 

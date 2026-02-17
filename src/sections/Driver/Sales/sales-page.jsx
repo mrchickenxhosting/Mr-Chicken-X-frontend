@@ -131,7 +131,7 @@ export default function DriverSalesPage() {
     if (sellType === 'CUSTOM') {
       setCount('');
       setWeight('');
-      setCalcBy('COUNT');
+      // setCalcBy('COUNT');
     }
 
   }, [sellType, selectedCages]);
@@ -429,11 +429,11 @@ export default function DriverSalesPage() {
                     onClick={() => setCalcBy('WEIGHT')}
                   />
 
-                  <Chip
+                  {/* <Chip
                     label="Birds × Rate"
                     color={calcBy === 'COUNT' ? 'primary' : 'default'}
                     onClick={() => setCalcBy('COUNT')}
-                  />
+                  /> */}
                 </Stack>
               </Grid>
 
