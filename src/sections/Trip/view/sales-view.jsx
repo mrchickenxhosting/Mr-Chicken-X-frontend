@@ -99,12 +99,16 @@ export default function DaySalesPage() {
     }
   };
 
-  // useEffect(() => {
-  //   const savedTrip = localStorage.getItem('selectedTripId');
-  //   if (savedTrip) {
-  //     setSelectedTrip(savedTrip);
-  //   }
-  // }, []);
+  useEffect(() => {
+  const savedTrip = localStorage.getItem('selectedTripId');
+
+  if (savedTrip && trips.some(t => String(t.id) === String(savedTrip))) {
+    setSelectedTrip(savedTrip);
+  } else {
+    localStorage.removeItem('selectedTripId');
+  }
+}, [trips]);
+
 
   const fetchSales = useCallback(async (tripId) => {
     try {
@@ -310,7 +314,7 @@ export default function DaySalesPage() {
       </Select>
     </FormControl>
 
-    {/* {selectedTrip && (
+    {selectedTrip && (
       <Typography
         variant="body2"
         color="error.main"
@@ -326,7 +330,7 @@ export default function DaySalesPage() {
       >
         Change Trip
       </Typography>
-    )} */}
+    )}
   </Stack>
 </Stack>
 
