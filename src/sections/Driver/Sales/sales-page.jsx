@@ -131,7 +131,6 @@ export default function DriverSalesPage() {
     if (sellType === 'CUSTOM') {
       setCount('');
       setWeight('');
-      // setCalcBy('COUNT');
     }
 
   }, [sellType, selectedCages]);
@@ -151,24 +150,25 @@ export default function DriverSalesPage() {
     try {
 
       const payload = {
-        tripId: trip.id,
-        customer_id: customer.id,
-        cage_numbers: selectedCages.map(c => c.cage_number), // ✅ ARRAY
-        sell_type: sellType,
-        bird_count: Number(count),
-        weight: Number(weight),
-        rate: Number(rate),
-        total_amount: totalAmount,
-        payment_mode: paymentMode,
-        cash_amount:
-          paymentMode === 'CASH' || paymentMode === 'BOTH'
-            ? Number(payment.cash || 0)
-            : 0,
-        upi_amount:
-          paymentMode === 'UPI' || paymentMode === 'BOTH'
-            ? Number(payment.upi || 0)
-            : 0,
-      };
+  tripId: trip.id,
+  customer_id: customer.id,
+  cage_numbers: selectedCages.map(c => c.cage_number),
+  sell_type: sellType,
+  bird_count: sellType === 'CUSTOM' ? Number(count) : null,
+  weight: sellType === 'CUSTOM' ? Number(weight) : null,
+  rate: Number(rate),
+  total_amount: totalAmount,
+  payment_mode: paymentMode,
+  cash_amount:
+    paymentMode === 'CASH' || paymentMode === 'BOTH'
+      ? Number(payment.cash || 0)
+      : 0,
+  upi_amount:
+    paymentMode === 'UPI' || paymentMode === 'BOTH'
+      ? Number(payment.upi || 0)
+      : 0,
+};
+
       console.log(payload)
       await sellToCustomer(payload);
 
@@ -428,12 +428,6 @@ export default function DriverSalesPage() {
                     color={calcBy === 'WEIGHT' ? 'primary' : 'default'}
                     onClick={() => setCalcBy('WEIGHT')}
                   />
-
-                  {/* <Chip
-                    label="Birds × Rate"
-                    color={calcBy === 'COUNT' ? 'primary' : 'default'}
-                    onClick={() => setCalcBy('COUNT')}
-                  /> */}
                 </Stack>
               </Grid>
 

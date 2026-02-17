@@ -125,31 +125,40 @@ export const getTripExpenses = async (tripId) => {
 
 // ======================= Report Data ===========================
 
-export const getReportData = async (filters) => {
-  const response = await axios.post('trader/reports', filters);
-  return response.data;
+// ==========================================
+// 1️⃣ TRIP REPORT (FILTERED LIST)
+// ==========================================
+export const getTripReport = async (filters) => {
+  const res = await axios.post(
+    `/trader/reports/trips`,
+    filters
+  );
+
+  return res.data.rows; // return only rows
 };
 
-export const getTripReportData = async (tripId) => {
-  const response = await axios.get(`trader/trips/${tripId}`);
-  return response.data;
-}
 
-export const getCustomerReportData = async (customerId) => {
-  const response = await axios.post(`trader/reports/customer-ledger`);
-  return response.data;
-}
-
-export const getTripReport = async () => {
-  const response = await axios.post(`trader/reports/trips`);
-  return response.data;
-}
-
-export const getCustomerSales = async (customerId) => {
+// ==========================================
+// 2️⃣ SINGLE TRIP SALES DETAILS
+// ==========================================
+export const getTripSalesDetails = async (tripId) => {
   const res = await axios.get(
-    `trader/reports/customers/${customerId}/sales`
+    `/trader/reports/trips/${tripId}`
   );
-  return res.data.rows; // 👈 IMPORTANT
+
+  return res.data.rows;
+};
+
+
+// ==========================================
+// 3️⃣ CUSTOMER SALES DETAILS
+// ==========================================
+export const getCustomerSalesDetails = async (customerId) => {
+  const res = await axios.get(
+    `/trader/reports/customers/${customerId}/sales`
+  );
+
+  return res.data.rows;
 };
 
 

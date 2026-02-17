@@ -1,5 +1,3 @@
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
 import { useState, useEffect } from 'react';
 
 import {
@@ -7,21 +5,18 @@ import {
   Grid,
   Stack,
   Button,
-  useTheme,
   TextField,
   Typography,
   Autocomplete,
-  useMediaQuery,
 } from '@mui/material';
-
-import { getUser } from 'src/utils/session';
 
 import {
   getallTrips,
-  getTripSales,
+  getTripReport,
   getallCustomer,
   getTripExpenses,
-  getCustomerSales,
+  getTripSalesDetails,
+  getCustomerSalesDetails,
 } from 'src/services/Trader.service';
 
 // --------------------------------------------------
@@ -36,42 +31,11 @@ const formatDate = (date) => {
   });
 };
 
-// EXPORT TO EXCEL
-const exportSalesToExcel = (sales) => {
-  const data = sales.map((sale) => ({
-    Customer: sale.customer_name,
-    'Sell Type': sale.sell_type,
-    Birds: sale.bird_count,
-    Weight: sale.weight,
-    Rate: sale.rate,
-    'Total Amount': sale.total_amount,
-    'Payment Mode': sale.payment_mode,
-    'Cash Amount': sale.cash_amount,
-    'UPI Amount': sale.upi_amount,
-    Date: formatDate(sale.sale_date || sale.created_at),
-  }));
-
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales');
-
-  const excelBuffer = XLSX.write(workbook, {
-    bookType: 'xlsx',
-    type: 'array',
-  });
-
-  const file = new Blob([excelBuffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
-
-  saveAs(file, `sales-report-${Date.now()}.xlsx`);
-};
+const safeNumber = (val) => Number(val || 0);
 
 // --------------------------------------------------
 
 export default function ReportPage() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [loading, setLoading] = useState(true);
   const [reportLoading, setReportLoading] = useState(false);
@@ -82,32 +46,11 @@ export default function ReportPage() {
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
-  const [sales, setSales] = useState([]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const [rows, setRows] = useState([]);
   const [expenses, setExpenses] = useState([]);
-
-  const user = getUser();
-
-
-  // --------------------------------------------------
-  // CALCULATE SUBTOTAL (Trip Only)
-
-  const subtotal = sales.reduce(
-    (sum, sale) => sum + Number(sale.total_amount || 0),
-    0
-  );
-
-  const totalExpense = expenses.reduce(
-    (sum, exp) =>
-      sum +
-      Number(exp.diesel_expense || 0) +
-      Number(exp.driver_expense || 0) +
-      Number(exp.other_expense || 0),
-    0
-  );
-
-
-  const profit = subtotal - totalExpense;
-  console.log(profit, totalExpense, expenses)
 
   // --------------------------------------------------
   // LOAD DROPDOWNS
@@ -131,134 +74,214 @@ export default function ReportPage() {
 
       setTrips(closedTrips);
       setCustomers(customerRes || []);
-    } catch (error) {
-      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
   // --------------------------------------------------
+  // LOAD TRIP SUMMARY REPORT
 
-  const getSaleDate = (sale) => {
-    if (selectedTrip) return formatDate(sale.created_at);
-    if (selectedCustomer) return formatDate(sale.sale_date);
-    return '-';
+  const handleLoadTripReport = async () => {
+    try {
+      setReportLoading(true);
+
+      const filters = {
+        startDate: startDate || null,
+        endDate: endDate || null,
+        farmerId: null,
+        driverId: null,
+      };
+
+      const res = await getTripReport(filters);
+      setRows(res.rows || res || []);
+
+      setSelectedTrip(null);
+      setSelectedCustomer(null);
+      setExpenses([]);
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   // --------------------------------------------------
-  // TRIP SELECT
+  // TRIP DETAILS
 
   const handleTripChange = async (trip) => {
     setSelectedTrip(trip);
     setSelectedCustomer(null);
-    setSales([]);
+    setRows([]);
+    setExpenses([]);
 
     if (!trip) return;
 
     try {
       setReportLoading(true);
-      const data = await getTripSales(trip.id);
-      const expense = await getTripExpenses(trip.id)
-      setExpenses(expense)
-      setSales(data || []);
-    } catch (error) {
-      console.error(error);
+
+      const [salesRes, expenseRes] = await Promise.all([
+        getTripSalesDetails(trip.id),
+        getTripExpenses(trip.id),
+      ]);
+
+      setRows(salesRes.rows || salesRes || []);
+      setExpenses(expenseRes || []);
     } finally {
       setReportLoading(false);
     }
   };
 
   // --------------------------------------------------
-  // CUSTOMER SELECT
+  // CUSTOMER LEDGER
 
   const handleCustomerChange = async (customer) => {
     setSelectedCustomer(customer);
     setSelectedTrip(null);
-    setSales([]);
+    setRows([]);
+    setExpenses([]);
 
     if (!customer) return;
 
     try {
       setReportLoading(true);
-      const data = await getCustomerSales(customer.id);
-      setSales(data || []);
-    } catch (error) {
-      console.error(error);
+      const res = await getCustomerSalesDetails(customer.id);
+      setRows(res.rows || res || []);
     } finally {
       setReportLoading(false);
     }
   };
 
+  // --------------------------------------------------
+
   const handleReset = () => {
     setSelectedTrip(null);
     setSelectedCustomer(null);
-    setSales([]);
+    setRows([]);
+    setExpenses([]);
+    setStartDate('');
+    setEndDate('');
   };
 
   // --------------------------------------------------
+  // TOTALS
+
+  const totalSales = rows.reduce(
+    (sum, row) => sum + safeNumber(row.total_sales || row.total_amount),
+    0
+  );
+
+  const totalPending = rows.reduce(
+    (sum, row) => sum + safeNumber(row.pending_amount || row.pending),
+    0
+  );
+
+  // --------------------------------------------------
+  // TRIP ANALYTICS (ONLY FOR TRIP MODE)
+
   const totalLiftedBirds = Number(selectedTrip?.total_birds || 0);
-  const totalWeight = selectedTrip?.total_weight
+const totalWeight = Number(selectedTrip?.total_weight || 0);
 
-  const totalSoldWeight = sales.reduce(
-    (sum, sale) => sum + Number(sale.weight || 0),
-    0
-  );
+const totalSoldBirds = rows.reduce(
+  (sum, row) => sum + Number(row.bird_count || 0),
+  0
+);
 
-  const totalSoldBirds = sales.reduce(
-    (sum, sale) => sum + Number(sale.bird_count || 0),
-    0
-  );
+const totalSoldWeight = rows.reduce(
+  (sum, row) => sum + Number(row.weight || 0),
+  0
+);
 
-  const remainingBirds = totalLiftedBirds - totalSoldBirds;
+const remainingBirds = totalLiftedBirds - totalSoldBirds;
+
+const soldPercentage =
+  totalLiftedBirds > 0
+    ? ((totalSoldBirds / totalLiftedBirds) * 100).toFixed(1)
+    : 0;
+
+const purchaseRatePerKg = Number(
+  expenses[0]?.purchase_rate_per_kg || 0
+);
+
+const totalSpent = purchaseRatePerKg * totalWeight;
+
+const totalOperationalExpense = expenses.reduce(
+  (sum, exp) =>
+    sum +
+    Number(exp.diesel_expense || 0) +
+    Number(exp.driver_expense || 0) +
+    Number(exp.other_expense || 0),
+  0
+);
+
+const netProfitLoss =
+  totalSales - totalSpent - totalOperationalExpense;
 
 
-  const soldPercentage =
-    totalLiftedBirds > 0
-      ? ((totalSoldBirds / totalLiftedBirds) * 100).toFixed(1)
-      : 0;
+  // --------------------------------------------------
+  // TITLE
 
-  const purchaseRatePerKg = Number(expenses[0]?.purchase_rate_per_kg || 0);
+  let reportTitle = 'Trip Report';
+  if (selectedTrip) reportTitle = 'Trip Sales';
+  if (selectedCustomer) reportTitle = 'Customer Ledger';
 
-  // Total cost of lifted birds
-  const totalSpent = purchaseRatePerKg * Number(totalWeight || 0);
-
-  const totalOperationalExpense = expenses.reduce(
-    (sum, exp) =>
-      sum +
-      Number(exp.diesel_expense || 0) +
-      Number(exp.driver_expense || 0) +
-      Number(exp.other_expense || 0),
-    0
-  );
-
-  // Profit or Loss
-  const netProfitLoss =
-    subtotal - totalSpent - totalOperationalExpense;
-
-  console.log(totalSpent, netProfitLoss)
-
+  // --------------------------------------------------
 
   return (
     <Stack spacing={3}>
       <Typography variant="h5">Reports</Typography>
 
-      {/* DROPDOWNS */}
+      {/* FILTER CARD */}
       <Card sx={{ p: 3 }}>
         <Grid container spacing={2}>
+          <Grid item xs={12} md={3}>
+            <TextField
+              label="Start Date"
+              type="date"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <TextField
+              label="End Date"
+              type="date"
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={handleLoadTripReport}
+            >
+              Load Trip Report
+            </Button>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={handleReset}
+            >
+              Reset
+            </Button>
+          </Grid>
+
           <Grid item xs={12} md={6}>
             <Autocomplete
               options={trips}
               loading={loading}
               value={selectedTrip}
-              isOptionEqualToValue={(o, v) => o.id === v.id}
               getOptionLabel={(o) =>
                 o
-                  ? `Trip #${new Date(o.trip_date).toLocaleDateString('en-IN', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                  })} • ${o.driver_name} • ${o.total_birds} birds • ${o.farmer_name}`
+                  ? `Trip #${formatDate(o.trip_date)} • ${o.total_birds} birds`
                   : ''
               }
               onChange={(e, v) => handleTripChange(v)}
@@ -273,7 +296,6 @@ export default function ReportPage() {
               options={customers}
               loading={loading}
               value={selectedCustomer}
-              isOptionEqualToValue={(o, v) => o.id === v.id}
               getOptionLabel={(o) => o?.name || ''}
               onChange={(e, v) => handleCustomerChange(v)}
               renderInput={(params) => (
@@ -281,299 +303,289 @@ export default function ReportPage() {
               )}
             />
           </Grid>
-
-          <Grid item xs={12}>
-            <Stack direction="row" justifyContent="flex-end">
-              <Button variant="outlined" onClick={handleReset}>
-                Reset
-              </Button>
-            </Stack>
-          </Grid>
         </Grid>
       </Card>
 
-      {/* SALES */}
-      {!reportLoading && sales.length > 0 && (
+      {/* REPORT TABLE */}
+      {!reportLoading && rows.length > 0 && (
         <Card sx={{ p: 2 }}>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            mb={2}
-          >
-            <Typography variant="subtitle1">Sales</Typography>
+          <Typography variant="subtitle1" mb={2}>
+            {reportTitle}
+          </Typography>
 
-            <Button
-              size={isMobile ? 'small' : 'medium'}
-              variant="contained"
-              onClick={() => exportSalesToExcel(sales)}
-            >
-              Export to Excel
-            </Button>
-          </Stack>
-
-          {/* DESKTOP VIEW */}
-          {!isMobile && (
+          {/* SUMMARY MODE */}
+          {!selectedTrip && !selectedCustomer && (
             <>
               <Grid container spacing={1} sx={{ fontWeight: 600 }}>
-                <Grid item xs={1}>Date</Grid>
-                <Grid item xs={2}>Customer</Grid>
-                <Grid item xs={1}>Type</Grid>
-                <Grid item xs={1}>Birds</Grid>
-                <Grid item xs={1}>Weight</Grid>
-                <Grid item xs={1}>Rate</Grid>
-                <Grid item xs={2}>Total</Grid>
-                <Grid item xs={1}>Pay</Grid>
-                <Grid item xs={1}>Cash</Grid>
-                <Grid item xs={1}>UPI</Grid>
+                <Grid item xs={3}>Date</Grid>
+                <Grid item xs={3}>Farmer</Grid>
+                <Grid item xs={3}>Total Sales</Grid>
+                <Grid item xs={3}>Pending</Grid>
               </Grid>
 
-              {sales.map((sale) => (
-                <Grid
-                  container
-                  spacing={1}
-                  key={sale.id}
-                  sx={{ py: 1, borderBottom: '1px solid #eee' }}
-                >
-                  <Grid item xs={1}>{getSaleDate(sale)}</Grid>
-                  <Grid item xs={2}>{sale.customer_name}</Grid>
-                  <Grid item xs={1}>{sale.sell_type}</Grid>
-                  <Grid item xs={1}>{sale.bird_count}</Grid>
-                  <Grid item xs={1}>{sale.weight}</Grid>
-                  <Grid item xs={1}>₹{sale.rate}</Grid>
-                  <Grid item xs={2}>₹{sale.total_amount}</Grid>
-                  <Grid item xs={1}>{sale.payment_mode}</Grid>
-                  <Grid item xs={1}>₹{sale.cash_amount}</Grid>
-                  <Grid item xs={1}>₹{sale.upi_amount}</Grid>
+              {rows.map((row) => (
+                <Grid container spacing={1} key={row.trip_id}>
+                  <Grid item xs={3}>
+                    {formatDate(row.trip_date)}
+                  </Grid>
+                  <Grid item xs={3}>{row.farmer_name}</Grid>
+                  <Grid item xs={3}>
+                    ₹{safeNumber(row.total_sales).toFixed(2)}
+                  </Grid>
+                  <Grid item xs={3}>
+                    ₹{safeNumber(row.pending_amount).toFixed(2)}
+                  </Grid>
                 </Grid>
               ))}
-
-              {/* SUBTOTAL (ONLY FOR TRIP) */}
-              {selectedTrip && (
-                <Grid
-                  container
-                  spacing={1}
-                  sx={{
-                    py: 2,
-                    fontWeight: 700,
-                    borderTop: '2px solid #000',
-                    mt: 1,
-                  }}
-                >
-                  <Grid item xs={7} />
-                  <Grid item xs={2}>Subtotal:</Grid>
-                  <Grid item xs={1} />
-                  <Grid item xs={2}>₹{Math.round(subtotal)}</Grid>
-                </Grid>
-              )}
             </>
           )}
 
-          {/* MOBILE VIEW */}
-          {isMobile && (
-            <Stack spacing={2}>
-              {sales.map((sale) => (
-                <Card key={sale.id} variant="outlined" sx={{ p: 2 }}>
-                  <Stack spacing={0.5}>
-                    <Typography fontWeight={600}>
-                      {sale.customer_name}
-                    </Typography>
-                    <Typography variant="body2">
-                      Birds: {sale.bird_count} | Weight: {sale.weight}
-                    </Typography>
-                    <Typography fontWeight={600}>
-                      Total: ₹{sale.total_amount}
-                    </Typography>
-                    <Typography variant="caption">
-                      {getSaleDate(sale)}
-                    </Typography>
-                  </Stack>
-                </Card>
-              ))}
+          {/* DETAIL MODE */}
+          {(selectedTrip || selectedCustomer) && (
+            <>
+              <Grid container spacing={1} sx={{ fontWeight: 600 }}>
+                <Grid item xs={2}>Date</Grid>
+                <Grid item xs={2}>Customer</Grid>
+                <Grid item xs={1}>Birds</Grid>
+                <Grid item xs={1}>Weight</Grid>
+                <Grid item xs={2}>Total</Grid>
+                <Grid item xs={2}>Cash</Grid>
+                <Grid item xs={2}>UPI</Grid>
+              </Grid>
 
-              {selectedTrip && (
-                <Card sx={{ p: 2, backgroundColor: '#fafafa' }}>
-                  <Typography fontWeight={700}>
-                    Subtotal: ₹{subtotal.toFixed(2)}
-                  </Typography>
-                </Card>
-              )}
-            </Stack>
+              {rows.map((row) => (
+                <Grid container spacing={1} key={row.id}>
+                  <Grid item xs={2}>
+                    {formatDate(row.sale_date)}
+                  </Grid>
+                  <Grid item xs={2}>
+                    {row.customer_name}
+                  </Grid>
+                  <Grid item xs={1}>{row.bird_count}</Grid>
+                  <Grid item xs={1}>{row.weight}</Grid>
+                  <Grid item xs={2}>
+                    ₹{row.total_amount}
+                  </Grid>
+                  <Grid item xs={2}>
+                    ₹{row.cash_amount}
+                  </Grid>
+                  <Grid item xs={2}>
+                    ₹{row.upi_amount}
+                  </Grid>
+                </Grid>
+              ))}
+            </>
           )}
+
+          {/* TOTALS */}
+          <Grid
+            container
+            spacing={1}
+            sx={{
+              py: 2,
+              fontWeight: 700,
+              borderTop: '2px solid #000',
+              mt: 1,
+            }}
+          >
+            <Grid item xs={6}> </Grid>
+            <Grid item xs={3}>
+              Total Sales: ₹{totalSales.toFixed(2)}
+            </Grid>
+            <Grid item xs={3}>
+              Total Pending: ₹{totalPending.toFixed(2)}
+            </Grid>
+          </Grid>
         </Card>
       )}
 
-      {/* EXPENSE BREAKDOWN CARD */}
+      {/* EXPENSE + ANALYTICS */}
       {selectedTrip && (
-        <Grid container spacing={3} mt={1}>
+  <Grid container spacing={3} mt={2}>
 
-          {/* Expense Card */}
-          <Grid item xs={12} md={6}>
-            <Card
-              sx={{
-                p: 3,
-                borderRadius: 3,
-                boxShadow: 3,
-                background: 'linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%)',
-              }}
-            >
-              <Typography variant="h6" fontWeight={700} mb={2}>
-                Expense Breakdown
-              </Typography>
+    {/* Expense Breakdown */}
+    <Grid item xs={12} md={6}>
+      <Card
+        sx={{
+          p: 3,
+          borderRadius: 3,
+          boxShadow: 3,
+          background: 'linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%)',
+        }}
+      >
+        <Typography variant="h6" fontWeight={700} mb={2}>
+          Expense Breakdown
+        </Typography>
 
-              {expenses.map((exp) => {
-                const diesel = Number(exp.diesel_expense || 0);
-                const driver = Number(exp.driver_expense || 0);
-                const other = Number(exp.other_expense || 0);
-                const total = diesel + driver + other;
+        {expenses.map((exp) => {
+          const diesel = Number(exp.diesel_expense || 0);
+          const driver = Number(exp.driver_expense || 0);
+          const other = Number(exp.other_expense || 0);
+          const total = diesel + driver + other;
 
-                return (
-                  <Grid container spacing={2} key={exp.id}>
-                    <Grid item xs={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Diesel
-                      </Typography>
-                      <Typography fontWeight={600}>₹{diesel}</Typography>
-                    </Grid>
+          return (
+            <Grid container spacing={2} key={exp.id}>
+              <Grid item xs={6}>
+                <Typography variant="body2" color="text.secondary">
+                  Diesel
+                </Typography>
+                <Typography fontWeight={600}>₹{diesel}</Typography>
+              </Grid>
 
-                    <Grid item xs={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Driver
-                      </Typography>
-                      <Typography fontWeight={600}>₹{driver}</Typography>
-                    </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body2" color="text.secondary">
+                  Driver
+                </Typography>
+                <Typography fontWeight={600}>₹{driver}</Typography>
+              </Grid>
 
-                    <Grid item xs={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Other
-                      </Typography>
-                      <Typography fontWeight={600}>₹{other}</Typography>
-                    </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body2" color="text.secondary">
+                  Other
+                </Typography>
+                <Typography fontWeight={600}>₹{other}</Typography>
+              </Grid>
 
-                    <Grid item xs={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Total Expense
-                      </Typography>
-                      <Typography variant="h6" fontWeight={700}>
-                        ₹{total}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                );
-              })}
-            </Card>
+              <Grid item xs={6}>
+                <Typography variant="body2" color="text.secondary">
+                  Total Expense
+                </Typography>
+                <Typography variant="h6" fontWeight={700}>
+                  ₹{total.toFixed(2)}
+                </Typography>
+              </Grid>
+            </Grid>
+          );
+        })}
+      </Card>
+    </Grid>
+
+    {/* Trip Analytics */}
+    <Grid item xs={12} md={6}>
+      <Card
+        sx={{
+          p: 3,
+          borderRadius: 3,
+          boxShadow: 3,
+          background: 'linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%)',
+        }}
+      >
+        <Typography variant="h6" fontWeight={700} mb={2}>
+          Trip Analytics
+        </Typography>
+
+        <Grid container spacing={2}>
+
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary">
+              Lifted Birds
+            </Typography>
+            <Typography variant="h6" fontWeight={700}>
+              {totalLiftedBirds}
+            </Typography>
           </Grid>
 
-          {/* Trip Analytics Card */}
-          <Grid item xs={12} md={6}>
-            <Card
-              sx={{
-                p: 3,
-                borderRadius: 3,
-                boxShadow: 3,
-                background: 'linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%)',
-              }}
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary">
+              Sold Birds
+            </Typography>
+            <Typography variant="h6" fontWeight={700}>
+              {totalSoldBirds}
+            </Typography>
+          </Grid>
+
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary">
+              Lifted Weight
+            </Typography>
+            <Typography fontWeight={600}>
+              {totalWeight} kg
+            </Typography>
+          </Grid>
+
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary">
+              Sold Weight
+            </Typography>
+            <Typography fontWeight={600}>
+              {totalSoldWeight.toFixed(2)} kg
+            </Typography>
+          </Grid>
+
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary">
+              Remaining Birds
+            </Typography>
+            <Typography
+              fontWeight={700}
+              color={remainingBirds < 0 ? 'error.main' : 'text.primary'}
             >
-              <Typography variant="h6" fontWeight={700} mb={2}>
-                Trip Analytics
-              </Typography>
+              {remainingBirds}
+            </Typography>
+          </Grid>
 
-              <Grid container spacing={2}>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary">
+              Sold %
+            </Typography>
+            <Typography fontWeight={700}>
+              {soldPercentage}%
+            </Typography>
+          </Grid>
 
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Lifted Birds
-                  </Typography>
-                  <Typography variant="h6" fontWeight={700}>
-                    {totalLiftedBirds}
-                  </Typography>
-                </Grid>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary">
+              Purchase Rate
+            </Typography>
+            <Typography fontWeight={600}>
+              ₹{purchaseRatePerKg}/kg
+            </Typography>
+          </Grid>
 
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Sold Birds
-                  </Typography>
-                  <Typography variant="h6" fontWeight={700}>
-                    {totalSoldBirds}
-                  </Typography>
-                </Grid>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary">
+              Purchase Cost
+            </Typography>
+            <Typography fontWeight={600}>
+              ₹{totalSpent.toFixed(2)}
+            </Typography>
+          </Grid>
 
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Lifted Weight
-                  </Typography>
-                  <Typography fontWeight={600}>
-                    {totalWeight} kg
-                  </Typography>
-                </Grid>
+          <Grid item xs={6}>
+            <Typography variant="body2" color="text.secondary">
+              Operational Expense
+            </Typography>
+            <Typography fontWeight={600}>
+              ₹{totalOperationalExpense.toFixed(2)}
+            </Typography>
+          </Grid>
 
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Sold Weight
-                  </Typography>
-                  <Typography fontWeight={600}>
-                    {totalSoldWeight.toFixed(2)} kg
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Remaining
-                  </Typography>
-                  <Typography
-                    fontWeight={700}
-                    color={remainingBirds < 0 ? 'error.main' : 'text.primary'}
-                  >
-                    {remainingBirds}
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Sold %
-                  </Typography>
-                  <Typography fontWeight={700}>
-                    {soldPercentage}%
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Purchase Rate
-                  </Typography>
-                  <Typography fontWeight={600}>
-                    ₹{purchaseRatePerKg}/kg
-                  </Typography>
-                </Grid>
-
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Purchase Cost
-                  </Typography>
-                  <Typography fontWeight={600}>
-                    ₹{totalSpent.toFixed(2)}
-                  </Typography>
-                </Grid>
-
-                {user?.role === "TRADER" && <Grid item xs={12}>
-                  <Typography
-                    variant="h5"
-                    fontWeight={700}
-                    color={netProfitLoss >= 0 ? 'success.main' : 'error.main'}
-                    mt={2}
-                  >
-                    {netProfitLoss >= 0 ? 'Profit' : 'Loss'}: ₹
-                    {netProfitLoss.toFixed(2)}
-                  </Typography>
-                </Grid>}
-
-              </Grid>
-            </Card>
+          <Grid item xs={12}>
+            <Typography
+              variant="h5"
+              fontWeight={700}
+              mt={2}
+              color={
+                netProfitLoss >= 0
+                  ? 'success.main'
+                  : 'error.main'
+              }
+            >
+              {netProfitLoss >= 0 ? 'Profit' : 'Loss'}:
+              ₹{netProfitLoss.toFixed(2)}
+            </Typography>
           </Grid>
 
         </Grid>
-      )}
+      </Card>
+    </Grid>
+
+  </Grid>
+)}
 
     </Stack>
   );
 }
+
+
+

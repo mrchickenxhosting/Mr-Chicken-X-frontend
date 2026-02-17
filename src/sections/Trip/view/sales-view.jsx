@@ -100,14 +100,14 @@ export default function DaySalesPage() {
   };
 
   useEffect(() => {
-  const savedTrip = localStorage.getItem('selectedTripId');
+    const savedTrip = localStorage.getItem('selectedTripId');
 
-  if (savedTrip && trips.some(t => String(t.id) === String(savedTrip))) {
-    setSelectedTrip(savedTrip);
-  } else {
-    localStorage.removeItem('selectedTripId');
-  }
-}, [trips]);
+    if (savedTrip && trips.some(t => String(t.id) === String(savedTrip))) {
+      setSelectedTrip(savedTrip);
+    } else {
+      localStorage.removeItem('selectedTripId');
+    }
+  }, [trips]);
 
 
   const fetchSales = useCallback(async (tripId) => {
@@ -269,95 +269,109 @@ export default function DaySalesPage() {
   return (
     <Container maxWidth="xxl">
 
-<Stack
-  direction={{ xs: 'column', md: 'row' }}
-  alignItems={{ xs: 'flex-start', md: 'center' }}
-  justifyContent="space-between"
-  spacing={2}
-  mb={4}
->
-  <Typography variant="h4">Sales</Typography>
-
-  <Stack
-    direction="column"
-    alignItems={{ xs: 'flex-start', md: 'flex-end' }}
-    spacing={1}
-    sx={{ width: { xs: '100%', md: 'auto' } }}
-  >
-    <FormControl
-      fullWidth
-      sx={{ minWidth: { md: 280 } }}
-    >
-      <InputLabel>Select Trip</InputLabel>
-
-      <Select
-        value={selectedTrip}
-        label="Select Trip"
-        disabled={!!selectedTrip}
-        onChange={(e) => {
-          const tripId = e.target.value;
-          setSelectedTrip(tripId);
-          localStorage.setItem('selectedTripId', tripId);
-        }}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        alignItems={{ xs: 'flex-start', md: 'center' }}
+        justifyContent="space-between"
+        spacing={2}
+        mb={4}
       >
-        {trips.map((trip) => (
-          <MenuItem key={trip.id} value={trip.id}>
-            Trip{' '}
-            {new Date(trip.trip_date).toLocaleDateString('en-IN', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            })}{' '}
-            • {trip.driver_name} 
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
+        <Typography variant="h4">Sales</Typography>
 
-    {selectedTrip && (
-      <Typography
-        variant="body2"
-        color="error.main"
-        sx={{
-          cursor: 'pointer',
-          fontWeight: 600,
-        }}
-        onClick={() => {
-          setSelectedTrip('');
-          localStorage.removeItem('selectedTripId');
-          setSales([]);
-        }}
-      >
-        Change Trip
-      </Typography>
-    )}
-  </Stack>
-</Stack>
+        <Stack
+          direction="column"
+          alignItems={{ xs: 'flex-start', md: 'flex-end' }}
+          spacing={1}
+          sx={{ width: { xs: '100%', md: 'auto' } }}
+        >
+          <FormControl
+            fullWidth
+            sx={{ minWidth: { md: 280 } }}
+          >
+            <InputLabel>Select Trip</InputLabel>
+
+            <Select
+              value={selectedTrip}
+              label="Select Trip"
+              disabled={!!selectedTrip}
+              onChange={(e) => {
+                const tripId = e.target.value;
+                setSelectedTrip(tripId);
+                localStorage.setItem('selectedTripId', tripId);
+              }}
+            >
+              {trips.map((trip) => (
+                <MenuItem key={trip.id} value={trip.id}>
+                  Trip{' '}
+                  {new Date(trip.trip_date).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })}{' '}
+                  • {trip.driver_name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {selectedTrip && (
+            <Typography
+              variant="body2"
+              color="error.main"
+              sx={{
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+              onClick={() => {
+                setSelectedTrip('');
+                localStorage.removeItem('selectedTripId');
+                setSales([]);
+              }}
+            >
+              Change Trip
+            </Typography>
+          )}
+        </Stack>
+      </Stack>
 
 
 
       {selectedTrip && (
         <Card sx={{ p: 2, mb: 3 }}>
-          <Stack direction="row" spacing={4} flexWrap="wrap">
+  <Stack
+    direction="row"
+    justifyContent="space-between"
+    alignItems="center"
+    flexWrap="wrap"
+  >
+    {/* LEFT SIDE - SUMMARY */}
+    <Stack direction="row" spacing={4} flexWrap="wrap">
+      <Typography variant="subtitle1">
+        Birds Collected: <b>{tripSummary.collected}</b>
+      </Typography>
 
-            <Typography variant="subtitle1">
-              Birds Collected: <b>{tripSummary.collected}</b>
-            </Typography>
+      <Typography variant="subtitle1">
+        Birds Sold: <b>{tripSummary.sold}</b>
+      </Typography>
 
-            <Typography variant="subtitle1">
-              Birds Sold: <b>{tripSummary.sold}</b>
-            </Typography>
+      <Typography
+        variant="subtitle1"
+        color={tripSummary.remaining > 0 ? 'error.main' : 'success.main'}
+        fontWeight="bold"
+      >
+        Remaining Birds: {tripSummary.remaining}
+      </Typography>
+    </Stack>
 
-            <Typography
-              variant="subtitle1"
-              color={tripSummary.remaining > 0 ? 'error.main' : 'success.main'}
-              fontWeight="bold"
-            >
-              Remaining Birds: {tripSummary.remaining}
-            </Typography>
-
-          </Stack>
-        </Card>
+    {/* RIGHT SIDE - REFRESH BUTTON */}
+    <Button
+      variant="outlined"
+      onClick={() => fetchSales(selectedTrip)}
+    >
+      Refresh
+    </Button>
+  </Stack>
+</Card>
       )}
 
 
