@@ -368,7 +368,7 @@ export default function EditTripDialog({
                   label="Trip Date"
                   value={date}
                   onChange={(newValue) => setDate(newValue)}
-                  minDate={dayjs()}
+                  // minDate={dayjs()}
                   slotProps={{
                     textField: { fullWidth: true },
                   }}
