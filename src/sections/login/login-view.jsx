@@ -120,7 +120,7 @@ const handleLogin = async () => {
       sx={{
         ...bgGradient({
           color: alpha(theme.palette.background.default, 0.1),
-          imgUrl: '/assets/background/overlay_4.jpg',
+          imgUrl: '/assets/background/overlay_2.jpg',
         }),
         height: 1,
       }}
@@ -141,7 +141,7 @@ const handleLogin = async () => {
             maxWidth: 420,
           }}
         >
-          <Typography variant="h4">Sign in</Typography>
+          <Typography variant="h4">Sign in to Poultry-Link</Typography>
 
 
           <Divider sx={{ my: 3 }}/>
