@@ -50,16 +50,13 @@ export default function TripCageEntry() {
   const [isPostLiftEdit, setIsPostLiftEdit] = useState(false);
   const [openLocationDialog, setOpenLocationDialog] = useState(false);
   const [coords, setCoords] = useState(null);
+  const [openColorSelect, setOpenColorSelect] = useState(false);
 
-  /**
-   * cageData structure
-   * {
-   *   1: {
-   *     DEFAULT: [{ chickens, weight }],
-   *     RED: [{ chickens, weight }]
-   *   }
-   * }
-   */
+const COLOR_DOT_MAP = {
+  RED: 'error.main',
+  BLUE: 'info.main',
+  BLACK: 'grey.800',
+};
   const [cageData, setCageData] = useState({});
 
   const [form, setForm] = useState({
@@ -121,11 +118,6 @@ export default function TripCageEntry() {
   // ----------------------------------------------------------------------
   // COLOR SELECT
 
-  const selectDefault = () => {
-    setSelectedColor(null);
-    const entry = cageData[selectedCage]?.DEFAULT?.[0];
-    setForm(entry || { chickens: '', weight: '' });
-  };
 
   const selectColor = (color) => {
     setSelectedColor(color);
@@ -416,14 +408,47 @@ export default function TripCageEntry() {
       )}
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>
-          Cage #{selectedCage}
-          {isPostLiftEdit && ' ⚠️ Post-Lift Edit'}
-        </DialogTitle>
+<DialogTitle
+  sx={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  }}
+>
+  <span>
+    Cage #{selectedCage}
+    {isPostLiftEdit && ' ⚠️ Post-Lift Edit'}
+  </span>
+
+  {/* RIGHT SIDE INDICATOR */}
+  <Stack direction="row" alignItems="center" spacing={1}>
+    {selectedColor && (
+      <>
+       <Stack
+  sx={{
+    width: 10,
+    height: 10,
+    borderRadius: '50%',
+    bgcolor: COLOR_DOT_MAP[selectedColor] || 'transparent',
+  }}
+/>
+        <Typography variant="caption">
+          {selectedColor}
+        </Typography>
+      </>
+    )}
+
+    {!selectedColor && (
+      <Typography variant="caption" color="text.secondary">
+        Normal
+      </Typography>
+    )}
+  </Stack>
+</DialogTitle>
 
         <DialogContent>
           <Stack spacing={2} mt={1}>
-            <Stack direction="row" spacing={1}>
+            {/* <Stack direction="row" spacing={1}>
               <Button
                 variant={!selectedColor ? 'contained' : 'outlined'}
                 onClick={selectDefault}
@@ -441,7 +466,7 @@ export default function TripCageEntry() {
                   {c}
                 </Button>
               ))}
-            </Stack>
+            </Stack> */}
 
             <TextField
               label="Birds"
@@ -462,7 +487,12 @@ export default function TripCageEntry() {
             />
           </Stack>
         </DialogContent>
-
+        <Button
+          variant="text"
+          onClick={() => setOpenColorSelect(true)}
+        >
+          + Add more birds
+        </Button>
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
 
@@ -480,6 +510,31 @@ export default function TripCageEntry() {
 
         </DialogActions>
       </Dialog>
+
+      <Dialog
+  open={openColorSelect}
+  onClose={() => setOpenColorSelect(false)}
+>
+  <DialogTitle>Select Bird Type</DialogTitle>
+
+  <DialogContent>
+    <Stack direction="row" spacing={2} mt={1}>
+      {COLORS.map((c) => (
+        <Button
+          key={c}
+          variant="contained"
+          color={COLOR_BUTTON_MAP[c]}
+          onClick={() => {
+            selectColor(c);     // 🔥 SAME OLD LOGIC
+            setOpenColorSelect(false);
+          }}
+        >
+          {c}
+        </Button>
+      ))}
+    </Stack>
+  </DialogContent>
+</Dialog>
 
       <Dialog open={openLocationDialog} onClose={() => setOpenLocationDialog(false)} fullWidth maxWidth="md">
         <DialogTitle>Update Farmer Location</DialogTitle>
