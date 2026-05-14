@@ -28,8 +28,8 @@ import UserTableRow from '../user-table-row';
 import EditTripDialog from '../EditTripDialog';
 import UserTableHead from '../user-table-head';
 import TableEmptyRows from '../table-empty-rows';
+import { emptyRows, getComparator } from '../utils';
 import UserTableToolbar from '../user-table-toolbar';
-import { emptyRows, applyFilter, getComparator } from '../utils';
 
 // ----------------------------------------------------------------------
 
@@ -88,11 +88,26 @@ export default function DriverTripsPage() {
     setFilterName(event.target.value);
   };
 
-  const dataFiltered = applyFilter({
-    inputData: trips,
-    comparator: getComparator(order, orderBy),
-    filterName,
-  });
+const dataFiltered = trips
+  .filter((trip) =>
+    [
+      trip.id,
+      trip.farmer_name,
+      trip.driver_name,
+      trip.lifter_name,
+      trip.contact_name,
+      trip.farmer_mobile,
+      trip.driver_mobile,
+      trip.contact_phone,
+      trip.status,
+      trip.farm_location,
+      trip.total_birds,
+    ]
+      .join(' ')
+      .toLowerCase()
+      .includes(filterName.toLowerCase())
+  )
+  .sort(getComparator(order, orderBy));
 
   const notFound = !dataFiltered.length && !!filterName;
 
@@ -257,6 +272,7 @@ Please reach on time and update status after loading.
 
       <Card>
         <UserTableToolbar
+         numSelected={0}
           filterName={filterName}
           onFilterName={handleFilterByName}
         />
