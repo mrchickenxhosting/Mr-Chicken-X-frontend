@@ -112,6 +112,19 @@ const handleLogin = async () => {
       >
         Login
       </LoadingButton>
+
+      <Typography
+  variant="caption"
+  sx={{
+    display: 'block',
+    textAlign: 'center',
+    mt: 2,
+    color: 'text.secondary',
+    cursor: 'noneS'
+  }}
+>
+  Version 1.0.0
+</Typography>
     </>
   );
 
