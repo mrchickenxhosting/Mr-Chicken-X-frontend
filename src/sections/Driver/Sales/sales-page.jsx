@@ -253,11 +253,11 @@ export default function DriverSalesPage() {
       finalTotal = totalAmount;
     } else {
       // PAYMENT MODE
-      cageNumbers = [0]; // dummy cage number for payment-only entries
+      cageNumbers = []; // dummy cage number for payment-only entries
       birdCount = 0;
       finalWeight = 0;
       finalRate = 0;
-      finalTotal = Number(payment.cash || payment.upi || 0);
+      finalTotal = Number(payment.cash || 0) + Number(payment.upi || 0);
       finalSellType = null;
     }
 
