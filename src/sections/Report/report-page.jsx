@@ -1,14 +1,23 @@
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import { useState, useEffect } from 'react';
 
 import {
   Card,
   Grid,
+  Table,
   Stack,
   Button,
+  TableRow,
+
+  TableBody,
+  TableCell,
+  TableHead,
   TextField,
   Typography,
   Autocomplete,
-} from '@mui/material';
+  TableContainer
+} from "@mui/material";
 
 import {
   getallTrips,
@@ -178,42 +187,42 @@ export default function ReportPage() {
   // TRIP ANALYTICS (ONLY FOR TRIP MODE)
 
   const totalLiftedBirds = Number(selectedTrip?.total_birds || 0);
-const totalWeight = Number(selectedTrip?.total_weight || 0);
+  const totalWeight = Number(selectedTrip?.total_weight || 0);
 
-const totalSoldBirds = rows.reduce(
-  (sum, row) => sum + Number(row.bird_count || 0),
-  0
-);
+  const totalSoldBirds = rows.reduce(
+    (sum, row) => sum + Number(row.bird_count || 0),
+    0
+  );
 
-const totalSoldWeight = rows.reduce(
-  (sum, row) => sum + Number(row.weight || 0),
-  0
-);
+  const totalSoldWeight = rows.reduce(
+    (sum, row) => sum + Number(row.weight || 0),
+    0
+  );
 
-const remainingBirds = totalLiftedBirds - totalSoldBirds;
+  const remainingBirds = totalLiftedBirds - totalSoldBirds;
 
-const soldPercentage =
-  totalLiftedBirds > 0
-    ? ((totalSoldBirds / totalLiftedBirds) * 100).toFixed(1)
-    : 0;
+  const soldPercentage =
+    totalLiftedBirds > 0
+      ? ((totalSoldBirds / totalLiftedBirds) * 100).toFixed(1)
+      : 0;
 
-const purchaseRatePerKg = Number(
-  expenses[0]?.purchase_rate_per_kg || 0
-);
+  const purchaseRatePerKg = Number(
+    expenses[0]?.purchase_rate_per_kg || 0
+  );
 
-const totalSpent = purchaseRatePerKg * totalWeight;
+  const totalSpent = purchaseRatePerKg * totalWeight;
 
-const totalOperationalExpense = expenses.reduce(
-  (sum, exp) =>
-    sum +
-    Number(exp.diesel_expense || 0) +
-    Number(exp.driver_expense || 0) +
-    Number(exp.other_expense || 0),
-  0
-);
+  const totalOperationalExpense = expenses.reduce(
+    (sum, exp) =>
+      sum +
+      Number(exp.diesel_expense || 0) +
+      Number(exp.driver_expense || 0) +
+      Number(exp.other_expense || 0),
+    0
+  );
 
-const netProfitLoss =
-  totalSales - totalSpent - totalOperationalExpense;
+  const netProfitLoss =
+    totalSales - totalSpent - totalOperationalExpense;
 
 
   // --------------------------------------------------
@@ -225,85 +234,181 @@ const netProfitLoss =
 
   // --------------------------------------------------
 
+  const handleExportExcel = () => {
+  let exportData = [];
+  let fileName = "Report.xlsx";
+
+  // Trip Summary Report
+  if (!selectedTrip && !selectedCustomer) {
+    fileName = "Trip_Report.xlsx";
+
+    exportData = rows.map((row) => ({
+      Date: formatDate(row.trip_date),
+      Farmer: row.farmer_name,
+      Birds: row.total_birds,
+      Weight: row.total_weight,
+      Rate: row.purchase_rate_per_kg,
+      Sales: row.total_sales,
+      Purchase: row.purchase_cost,
+      Diesel: row.diesel_expense,
+      Driver: row.driver_expense,
+      Other: row.other_expense,
+      Expense: row.total_expense,
+      Pending: row.pending_amount,
+      Profit: row.profit_loss,
+    }));
+  }
+
+  // Trip Sales Report
+  if (selectedTrip) {
+    fileName = `Trip_${selectedTrip.id}_Sales.xlsx`;
+
+    exportData = rows.map((row) => ({
+      Date: formatDate(row.sale_date),
+      Customer: row.customer_name,
+      Birds: row.bird_count,
+      Weight: row.weight,
+      Rate: row.rate,
+      Amount: row.total_amount,
+      Cash: row.cash_amount,
+      UPI: row.upi_amount,
+      Pending: row.pending,
+    }));
+  }
+
+  // Customer Ledger
+  if (selectedCustomer) {
+    fileName = `${selectedCustomer.name}_Ledger.xlsx`;
+
+    exportData = rows.map((row) => ({
+      Date: formatDate(row.sale_date),
+      Trip: row.trip_id,
+      Birds: row.bird_count,
+      Weight: row.weight,
+      Amount: row.total_amount,
+      Cash: row.cash_amount,
+      UPI: row.upi_amount,
+      Pending: row.pending,
+    }));
+  }
+
+  const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    "Report"
+  );
+
+  const excelBuffer = XLSX.write(workbook, {
+    bookType: "xlsx",
+    type: "array",
+  });
+
+  const file = new Blob(
+    [excelBuffer],
+    {
+      type:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }
+  );
+
+  saveAs(file, fileName);
+};
   return (
     <Stack spacing={3}>
       <Typography variant="h5">Reports</Typography>
 
       {/* FILTER CARD */}
       <Card sx={{ p: 3 }}>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="Start Date"
-              type="date"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </Grid>
+       <Grid container spacing={2}>
+  <Grid item xs={12} md={3}>
+    <TextField
+      label="Start Date"
+      type="date"
+      fullWidth
+      InputLabelProps={{ shrink: true }}
+      value={startDate}
+      onChange={(e) => setStartDate(e.target.value)}
+    />
+  </Grid>
 
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="End Date"
-              type="date"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </Grid>
+  <Grid item xs={12} md={3}>
+    <TextField
+      label="End Date"
+      type="date"
+      fullWidth
+      InputLabelProps={{ shrink: true }}
+      value={endDate}
+      onChange={(e) => setEndDate(e.target.value)}
+    />
+  </Grid>
 
-          <Grid item xs={12} md={3}>
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={handleLoadTripReport}
-            >
-              Load Trip Report
-            </Button>
-          </Grid>
+  <Grid item xs={12} md={2}>
+    <Button
+      variant="contained"
+      fullWidth
+      onClick={handleLoadTripReport}
+    >
+      Load Report
+    </Button>
+  </Grid>
 
-          <Grid item xs={12} md={3}>
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={handleReset}
-            >
-              Reset
-            </Button>
-          </Grid>
+  <Grid item xs={12} md={2}>
+    <Button
+      variant="outlined"
+      fullWidth
+      onClick={handleReset}
+    >
+      Reset
+    </Button>
+  </Grid>
 
-          <Grid item xs={12} md={6}>
-            <Autocomplete
-              options={trips}
-              loading={loading}
-              value={selectedTrip}
-              getOptionLabel={(o) =>
-                o
-                  ? `Trip #${formatDate(o.trip_date)} • ${o.total_birds} birds`
-                  : ''
-              }
-              onChange={(e, v) => handleTripChange(v)}
-              renderInput={(params) => (
-                <TextField {...params} label="Select Trip" />
-              )}
-            />
-          </Grid>
+  <Grid item xs={12} md={2}>
+    <Button
+      variant="contained"
+      color="success"
+      fullWidth
+      onClick={handleExportExcel}
+      disabled={reportLoading || rows.length === 0}
+    >
+      Export Excel
+    </Button>
+  </Grid>
 
-          <Grid item xs={12} md={6}>
-            <Autocomplete
-              options={customers}
-              loading={loading}
-              value={selectedCustomer}
-              getOptionLabel={(o) => o?.name || ''}
-              onChange={(e, v) => handleCustomerChange(v)}
-              renderInput={(params) => (
-                <TextField {...params} label="Select Customer" />
-              )}
-            />
-          </Grid>
-        </Grid>
+  <Grid item xs={12} md={6}>
+    <Autocomplete
+      options={trips}
+      loading={loading}
+      value={selectedTrip}
+      getOptionLabel={(o) =>
+        o
+          ? `Trip #${formatDate(o.trip_date)} • ${o.total_birds} birds`
+          : ''
+      }
+      onChange={(e, v) => handleTripChange(v)}
+      renderInput={(params) => (
+        <TextField {...params} label="Select Trip" />
+      )}
+    />
+  </Grid>
+
+  <Grid item xs={12} md={6}>
+    <Autocomplete
+      options={customers}
+      loading={loading}
+      value={selectedCustomer}
+      getOptionLabel={(o) => o?.name || ''}
+      onChange={(e, v) => handleCustomerChange(v)}
+      renderInput={(params) => (
+        <TextField {...params} label="Select Customer" />
+      )}
+    />
+  </Grid>
+</Grid>
+        
       </Card>
 
       {/* REPORT TABLE */}
@@ -313,69 +418,371 @@ const netProfitLoss =
             {reportTitle}
           </Typography>
 
+          <Grid container spacing={2} mb={2}>
+  <Grid item xs={3}>
+    <Card sx={{ p: 2 }}>
+      <Typography variant="caption">
+        Total Sales
+      </Typography>
+      <Typography variant="h5">
+        ₹{totalSales.toLocaleString()}
+      </Typography>
+    </Card>
+  </Grid>
+
+  <Grid item xs={3}>
+    <Card sx={{ p: 2 }}>
+      <Typography variant="caption">
+        Total Birds Sold
+      </Typography>
+      <Typography variant="h5">
+        {totalSoldBirds}
+      </Typography>
+    </Card>
+  </Grid>
+
+  <Grid item xs={3}>
+    <Card sx={{ p: 2 }}>
+      <Typography variant="caption">
+        Total Weight
+      </Typography>
+      <Typography variant="h5">
+        {totalSoldWeight.toFixed(2)} KG
+      </Typography>
+    </Card>
+  </Grid>
+
+  <Grid item xs={3}>
+    <Card sx={{ p: 2 }}>
+      <Typography variant="caption">
+        Pending
+      </Typography>
+      <Typography
+        variant="h5"
+        color="warning.main"
+      >
+        ₹{totalPending.toLocaleString()}
+      </Typography>
+    </Card>
+  </Grid>
+</Grid>
+
+
           {/* SUMMARY MODE */}
           {!selectedTrip && !selectedCustomer && (
-            <>
-              <Grid container spacing={1} sx={{ fontWeight: 600 }}>
-                <Grid item xs={3}>Date</Grid>
-                <Grid item xs={3}>Farmer</Grid>
-                <Grid item xs={3}>Total Sales</Grid>
-                <Grid item xs={3}>Pending</Grid>
-              </Grid>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Farmer</TableCell>
+                    <TableCell>Birds</TableCell>
+                    <TableCell>KG</TableCell>
+                    <TableCell>Rate</TableCell>
+                    <TableCell align="right">Sales</TableCell>
+                    <TableCell align="right">Purchase</TableCell>
+                    <TableCell align="right">Diesel</TableCell>
+                    <TableCell align="right">Driver</TableCell>
+                    <TableCell align="right">Other</TableCell>
+                    <TableCell align="right">Expense</TableCell>
+                    <TableCell align="right">Pending</TableCell>
+                    <TableCell align="right">Profit</TableCell>
+                  </TableRow>
+                </TableHead>
 
-              {rows.map((row) => (
-                <Grid container spacing={1} key={row.trip_id}>
-                  <Grid item xs={3}>
-                    {formatDate(row.trip_date)}
-                  </Grid>
-                  <Grid item xs={3}>{row.farmer_name}</Grid>
-                  <Grid item xs={3}>
-                    ₹{safeNumber(row.total_sales).toFixed(2)}
-                  </Grid>
-                  <Grid item xs={3}>
-                    ₹{safeNumber(row.pending_amount).toFixed(2)}
-                  </Grid>
-                </Grid>
-              ))}
-            </>
+                <TableBody>
+                  {rows.map((row) => {
+                    const profit = safeNumber(row.profit_loss);
+
+                    return (
+                      <TableRow key={row.trip_id} hover>
+                        <TableCell>
+                          {formatDate(row.trip_date)}
+                        </TableCell>
+
+                        <TableCell>{row.farmer_name}</TableCell>
+
+                        <TableCell>{row.total_birds}</TableCell>
+
+                        <TableCell>
+                          {safeNumber(row.total_weight).toFixed(1)}
+                        </TableCell>
+
+                        <TableCell>
+                          ₹{row.purchase_rate_per_kg}
+                        </TableCell>
+
+                        <TableCell align="right">
+                          ₹{safeNumber(row.total_sales).toLocaleString()}
+                        </TableCell>
+
+                        <TableCell align="right">
+                          ₹{safeNumber(row.purchase_cost).toLocaleString()}
+                        </TableCell>
+
+                        <TableCell align="right">
+                          ₹{safeNumber(row.diesel_expense).toLocaleString()}
+                        </TableCell>
+
+                        <TableCell align="right">
+                          ₹{safeNumber(row.driver_expense).toLocaleString()}
+                        </TableCell>
+
+                        <TableCell align="right">
+                          ₹{safeNumber(row.other_expense).toLocaleString()}
+                        </TableCell>
+
+                        <TableCell align="right">
+                          ₹{safeNumber(row.total_expense).toLocaleString()}
+                        </TableCell>
+
+                        <TableCell
+                          align="right"
+                          sx={{
+                            color:
+                              safeNumber(row.pending_amount) > 0
+                                ? "warning.main"
+                                : "inherit",
+                            fontWeight: 600,
+                          }}
+                        >
+                          ₹{safeNumber(row.pending_amount).toLocaleString()}
+                        </TableCell>
+
+                        <TableCell
+                          align="right"
+                          sx={{
+                            color:
+                              profit >= 0
+                                ? "success.main"
+                                : "error.main",
+                            fontWeight: 700,
+                          }}
+                        >
+                          ₹{profit.toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+
+                  <TableRow
+                    sx={{
+                      "& td": {
+                        fontWeight: 700,
+                        borderTop: "2px solid",
+                      },
+                    }}
+                  >
+                    <TableCell colSpan={5}>
+                      TOTAL
+                    </TableCell>
+
+                    <TableCell align="right">
+                      ₹{rows
+                        .reduce(
+                          (s, r) => s + safeNumber(r.total_sales),
+                          0
+                        )
+                        .toLocaleString()}
+                    </TableCell>
+
+                    <TableCell align="right">
+                      ₹{rows
+                        .reduce(
+                          (s, r) => s + safeNumber(r.purchase_cost),
+                          0
+                        )
+                        .toLocaleString()}
+                    </TableCell>
+
+                    <TableCell />
+
+                    <TableCell />
+
+                    <TableCell />
+
+                    <TableCell align="right">
+                      ₹{rows
+                        .reduce(
+                          (s, r) => s + safeNumber(r.total_expense),
+                          0
+                        )
+                        .toLocaleString()}
+                    </TableCell>
+
+                    <TableCell align="right">
+                      ₹{rows
+                        .reduce(
+                          (s, r) => s + safeNumber(r.pending_amount),
+                          0
+                        )
+                        .toLocaleString()}
+                    </TableCell>
+
+                    <TableCell
+                      align="right"
+                      sx={{
+                        color:
+                          rows.reduce(
+                            (s, r) => s + safeNumber(r.profit_loss),
+                            0
+                          ) >= 0
+                            ? "success.main"
+                            : "error.main",
+                      }}
+                    >
+                      ₹{rows
+                        .reduce(
+                          (s, r) => s + safeNumber(r.profit_loss),
+                          0
+                        )
+                        .toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
+
 
           {/* DETAIL MODE */}
-          {(selectedTrip || selectedCustomer) && (
-            <>
-              <Grid container spacing={1} sx={{ fontWeight: 600 }}>
-                <Grid item xs={2}>Date</Grid>
-                <Grid item xs={2}>Customer</Grid>
-                <Grid item xs={1}>Birds</Grid>
-                <Grid item xs={1}>Weight</Grid>
-                <Grid item xs={2}>Total</Grid>
-                <Grid item xs={2}>Cash</Grid>
-                <Grid item xs={2}>UPI</Grid>
-              </Grid>
+{(selectedTrip || selectedCustomer) && (
+  <TableContainer>
+    <Table size="small">
+      <TableHead>
+        <TableRow>
+          <TableCell>Date</TableCell>
+          <TableCell>Customer</TableCell>
+          <TableCell align="center">Birds</TableCell>
+          <TableCell align="center">Weight</TableCell>
+          <TableCell align="center">Rate</TableCell>
+          <TableCell align="right">Amount</TableCell>
+          <TableCell align="right">Cash</TableCell>
+          <TableCell align="right">UPI</TableCell>
+          <TableCell align="right">Pending</TableCell>
+        </TableRow>
+      </TableHead>
 
-              {rows.map((row) => (
-                <Grid container spacing={1} key={row.id}>
-                  <Grid item xs={2}>
-                    {formatDate(row.sale_date)}
-                  </Grid>
-                  <Grid item xs={2}>
-                    {row.customer_name}
-                  </Grid>
-                  <Grid item xs={1}>{row.bird_count}</Grid>
-                  <Grid item xs={1}>{row.weight}</Grid>
-                  <Grid item xs={2}>
-                    ₹{row.total_amount}
-                  </Grid>
-                  <Grid item xs={2}>
-                    ₹{row.cash_amount}
-                  </Grid>
-                  <Grid item xs={2}>
-                    ₹{row.upi_amount}
-                  </Grid>
-                </Grid>
-              ))}
-            </>
-          )}
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={row.id} hover>
+            <TableCell>
+              {formatDate(row.sale_date)}
+            </TableCell>
+
+            <TableCell>
+              {row.customer_name}
+            </TableCell>
+
+            <TableCell align="center">
+              {row.bird_count}
+            </TableCell>
+
+            <TableCell align="center">
+              {safeNumber(row.weight).toFixed(2)}
+            </TableCell>
+
+            <TableCell align="center">
+              ₹{safeNumber(row.rate).toFixed(0)}
+            </TableCell>
+
+            <TableCell align="right">
+              ₹{safeNumber(row.total_amount).toLocaleString()}
+            </TableCell>
+
+            <TableCell align="right">
+              ₹{safeNumber(row.cash_amount).toLocaleString()}
+            </TableCell>
+
+            <TableCell align="right">
+              ₹{safeNumber(row.upi_amount).toLocaleString()}
+            </TableCell>
+
+            <TableCell
+              align="right"
+              sx={{
+                color:
+                  safeNumber(row.pending) > 0
+                    ? "warning.main"
+                    : "success.main",
+                fontWeight: 600,
+              }}
+            >
+              ₹{safeNumber(row.pending).toLocaleString()}
+            </TableCell>
+          </TableRow>
+        ))}
+
+        <TableRow
+          sx={{
+            "& td": {
+              fontWeight: 700,
+              borderTop: "2px solid",
+            },
+          }}
+        >
+          <TableCell colSpan={2}>
+            TOTAL
+          </TableCell>
+
+          <TableCell align="center">
+            {rows.reduce(
+              (s, r) => s + safeNumber(r.bird_count),
+              0
+            )}
+          </TableCell>
+
+          <TableCell align="center">
+            {rows
+              .reduce(
+                (s, r) => s + safeNumber(r.weight),
+                0
+              )
+              .toFixed(2)}
+          </TableCell>
+
+          <TableCell />
+
+          <TableCell align="right">
+            ₹{rows
+              .reduce(
+                (s, r) => s + safeNumber(r.total_amount),
+                0
+              )
+              .toLocaleString()}
+          </TableCell>
+
+          <TableCell align="right">
+            ₹{rows
+              .reduce(
+                (s, r) => s + safeNumber(r.cash_amount),
+                0
+              )
+              .toLocaleString()}
+          </TableCell>
+
+          <TableCell align="right">
+            ₹{rows
+              .reduce(
+                (s, r) => s + safeNumber(r.upi_amount),
+                0
+              )
+              .toLocaleString()}
+          </TableCell>
+
+          <TableCell align="right">
+            ₹{rows
+              .reduce(
+                (s, r) => s + safeNumber(r.pending),
+                0
+              )
+              .toLocaleString()}
+          </TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
+  </TableContainer>
+)}
 
           {/* TOTALS */}
           <Grid
@@ -400,20 +807,18 @@ const netProfitLoss =
       )}
 
       {/* EXPENSE + ANALYTICS */}
-      {selectedTrip && (
+{selectedTrip && (
   <Grid container spacing={3} mt={2}>
-
     {/* Expense Breakdown */}
-    <Grid item xs={12} md={6}>
+    <Grid item xs={12} md={4}>
       <Card
         sx={{
           p: 3,
+          height: "100%",
           borderRadius: 3,
-          boxShadow: 3,
-          background: 'linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%)',
         }}
       >
-        <Typography variant="h6" fontWeight={700} mb={2}>
+        <Typography variant="h6" fontWeight={700} mb={3}>
           Expense Breakdown
         </Typography>
 
@@ -424,162 +829,187 @@ const netProfitLoss =
           const total = diesel + driver + other;
 
           return (
-            <Grid container spacing={2} key={exp.id}>
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
+            <Stack spacing={2} key={exp.id}>
+              <Grid container>
+                <Grid item xs={6}>
                   Diesel
-                </Typography>
-                <Typography fontWeight={600}>₹{diesel}</Typography>
+                </Grid>
+                <Grid item xs={6} textAlign="right">
+                  ₹{diesel.toLocaleString()}
+                </Grid>
               </Grid>
 
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
+              <Grid container>
+                <Grid item xs={6}>
                   Driver
-                </Typography>
-                <Typography fontWeight={600}>₹{driver}</Typography>
+                </Grid>
+                <Grid item xs={6} textAlign="right">
+                  ₹{driver.toLocaleString()}
+                </Grid>
               </Grid>
 
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
+              <Grid container>
+                <Grid item xs={6}>
                   Other
-                </Typography>
-                <Typography fontWeight={600}>₹{other}</Typography>
+                </Grid>
+                <Grid item xs={6} textAlign="right">
+                  ₹{other.toLocaleString()}
+                </Grid>
               </Grid>
 
-              <Grid item xs={6}>
-                <Typography variant="body2" color="text.secondary">
-                  Total Expense
-                </Typography>
-                <Typography variant="h6" fontWeight={700}>
-                  ₹{total.toFixed(2)}
-                </Typography>
+              <Grid
+                container
+                sx={{
+                  mt: 1,
+                  pt: 2,
+                  borderTop: "1px solid #ddd",
+                  fontWeight: 700,
+                }}
+              >
+                <Grid item xs={6}>
+                  Total
+                </Grid>
+                <Grid item xs={6} textAlign="right">
+                  ₹{total.toLocaleString()}
+                </Grid>
               </Grid>
-            </Grid>
+            </Stack>
           );
         })}
       </Card>
     </Grid>
 
-    {/* Trip Analytics */}
-    <Grid item xs={12} md={6}>
+    {/* Analytics */}
+    <Grid item xs={12} md={8}>
       <Card
         sx={{
           p: 3,
           borderRadius: 3,
-          boxShadow: 3,
-          background: 'linear-gradient(135deg, #f0f7ff 0%, #e6f2ff 100%)',
         }}
       >
-        <Typography variant="h6" fontWeight={700} mb={2}>
+        <Typography variant="h6" fontWeight={700} mb={3}>
           Trip Analytics
         </Typography>
 
         <Grid container spacing={2}>
-
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
+          <Grid item xs={6} md={3}>
+            <Typography variant="caption">
               Lifted Birds
             </Typography>
-            <Typography variant="h6" fontWeight={700}>
+            <Typography variant="h5" fontWeight={700}>
               {totalLiftedBirds}
             </Typography>
           </Grid>
 
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
+          <Grid item xs={6} md={3}>
+            <Typography variant="caption">
               Sold Birds
             </Typography>
-            <Typography variant="h6" fontWeight={700}>
+            <Typography variant="h5" fontWeight={700}>
               {totalSoldBirds}
             </Typography>
           </Grid>
 
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
+          <Grid item xs={6} md={3}>
+            <Typography variant="caption">
               Lifted Weight
             </Typography>
-            <Typography fontWeight={600}>
-              {totalWeight} kg
+            <Typography variant="h5" fontWeight={700}>
+              {totalWeight}
             </Typography>
           </Grid>
 
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
+          <Grid item xs={6} md={3}>
+            <Typography variant="caption">
               Sold Weight
             </Typography>
-            <Typography fontWeight={600}>
-              {totalSoldWeight.toFixed(2)} kg
+            <Typography variant="h5" fontWeight={700}>
+              {totalSoldWeight.toFixed(1)}
             </Typography>
           </Grid>
 
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
+          <Grid item xs={6} md={3}>
+            <Typography variant="caption">
               Remaining Birds
             </Typography>
             <Typography
+              variant="h5"
               fontWeight={700}
-              color={remainingBirds < 0 ? 'error.main' : 'text.primary'}
+              color={
+                remainingBirds > 0
+                  ? "warning.main"
+                  : "success.main"
+              }
             >
               {remainingBirds}
             </Typography>
           </Grid>
 
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
+          <Grid item xs={6} md={3}>
+            <Typography variant="caption">
               Sold %
             </Typography>
-            <Typography fontWeight={700}>
+            <Typography variant="h5" fontWeight={700}>
               {soldPercentage}%
             </Typography>
           </Grid>
 
-          <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
+          <Grid item xs={6} md={3}>
+            <Typography variant="caption">
               Purchase Rate
             </Typography>
-            <Typography fontWeight={600}>
-              ₹{purchaseRatePerKg}/kg
+            <Typography variant="h5" fontWeight={700}>
+              ₹{purchaseRatePerKg}
             </Typography>
           </Grid>
 
+          <Grid item xs={6} md={3}>
+            <Typography variant="caption">
+              Expense
+            </Typography>
+            <Typography variant="h5" fontWeight={700}>
+              ₹{totalOperationalExpense.toLocaleString()}
+            </Typography>
+          </Grid>
+        </Grid>
+
+        <Grid
+          container
+          spacing={2}
+          sx={{
+            mt: 3,
+            pt: 3,
+            borderTop: "1px solid #ddd",
+          }}
+        >
           <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="caption">
               Purchase Cost
             </Typography>
-            <Typography fontWeight={600}>
-              ₹{totalSpent.toFixed(2)}
+            <Typography variant="h4" fontWeight={700}>
+              ₹{totalSpent.toLocaleString()}
             </Typography>
           </Grid>
 
           <Grid item xs={6}>
-            <Typography variant="body2" color="text.secondary">
-              Operational Expense
+            <Typography variant="caption">
+              Net Result
             </Typography>
-            <Typography fontWeight={600}>
-              ₹{totalOperationalExpense.toFixed(2)}
-            </Typography>
-          </Grid>
-
-          <Grid item xs={12}>
             <Typography
-              variant="h5"
+              variant="h4"
               fontWeight={700}
-              mt={2}
               color={
                 netProfitLoss >= 0
-                  ? 'success.main'
-                  : 'error.main'
+                  ? "success.main"
+                  : "error.main"
               }
             >
-              {netProfitLoss >= 0 ? 'Profit' : 'Loss'}:
-              ₹{netProfitLoss.toFixed(2)}
+              ₹{netProfitLoss.toLocaleString()}
             </Typography>
           </Grid>
-
         </Grid>
       </Card>
     </Grid>
-
   </Grid>
 )}
 
