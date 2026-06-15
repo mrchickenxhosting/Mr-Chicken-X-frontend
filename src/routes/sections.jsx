@@ -21,8 +21,9 @@ export const TripsPage = lazy(() => import('src/pages/Trip/trips'));
 export const SalesPage = lazy(() => import('src/pages/Trip/sales'));
 export const CloseDayPage = lazy(() => import('src/pages/Trip/dayclouser'));
 
-export const ChickenSalesPage = lazy(() => import('src/pages/Driver/chickenSales'));
+export const CarMasterPage = lazy(() => import('src/pages/Driver/car'));
 export const LifitingPage = lazy(() => import('src/pages/Driver/lifiting'));
+export const ChickenSalesPage = lazy(() => import('src/pages/Driver/chickenSales'));
 
 export const AdminDashPage = lazy(() => import('src/pages/Admin/adminDash'));
 export const TraderPage = lazy(() => import('src/pages/Admin/traders'));
@@ -49,11 +50,12 @@ export default function Router() {
         { index: true, element: <IndexPage /> }, // dashboard (default)
 
         // Masters
-        { path: 'user/managers', element: <ManagerPage /> },
-        { path: 'user/drivers', element: <DriverPage /> },
-        { path: 'user/customers', element: <CustomerPage /> },
-        { path: 'user/farmers', element: <FarmerPage /> },
         { path: 'user/lifter', element: <LifterPage /> },
+        { path: 'user/cars', element: <CarMasterPage /> },
+        { path: 'user/drivers', element: <DriverPage /> },
+        { path: 'user/farmers', element: <FarmerPage /> },
+        { path: 'user/managers', element: <ManagerPage /> },
+        { path: 'user/customers', element: <CustomerPage /> },
 
         // Outstanding
         { path: 'outstanding', element: <OutstandingPage /> },

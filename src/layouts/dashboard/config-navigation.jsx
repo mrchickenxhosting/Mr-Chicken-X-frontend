@@ -25,6 +25,7 @@ const navConfig = [
     roles: ['TRADER', 'MANAGER'],
     children: [
       { title: 'Managers', path: '/user/managers', roles: ['TRADER'] },
+      { title: 'Cars', path: '/user/cars', roles: ['TRADER', 'MANAGER'] },
       { title: 'Delivery Patner', path: '/user/drivers', roles: ['TRADER', 'MANAGER'] },
       { title: 'Lifter', path: '/user/lifter', roles: ['TRADER', 'MANAGER'] },
       { title: 'Customers', path: '/user/customers', roles: ['TRADER', 'MANAGER'] },

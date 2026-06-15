@@ -263,3 +263,39 @@ export const disableFarmer = async (farmerId, status) => {
   );
   return response.data;
 }
+
+// ======================= Car Master ===========================
+
+export const getallCars = async () => {
+  const response = await axios.get('trader/cars');
+  return response.data;
+};
+
+export const createCar = async (payload) => {
+  const response = await axios.post('trader/cars', payload);
+  return response.data;
+};
+
+export const updateCar = async (carId, payload) => {
+  const response = await axios.put(
+    `trader/cars/${carId}`,
+    payload
+  );
+  return response.data;
+};
+
+export const deleteCar = async (carId) => {
+  const response = await axios.delete(
+    `trader/cars/${carId}`
+  );
+  return response.data;
+};
+
+export const disableCar = async (carId, status) => {
+  const response = await axios.patch(
+    `trader/cars/${carId}/status`,
+    { status }
+  );
+
+  return response.data;
+};

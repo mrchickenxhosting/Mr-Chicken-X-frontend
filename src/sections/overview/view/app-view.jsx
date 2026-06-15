@@ -79,7 +79,8 @@ const tripStatusTimeline = tripStatus.map((item, index) => ({
 }));
 
 
-  console.log("Active Trips:", tripStatus);
+const topPendingCustomers = dashboard?.topPendingCustomers || [];
+const topDrivers = dashboard?.topDrivers || [];
 
 
   // ================= RENDER =================
@@ -92,41 +93,107 @@ const tripStatusTimeline = tripStatus.map((item, index) => ({
       <Grid container spacing={3}>
         {/* ================= SUMMARY ================= */}
 
-        <Grid xs={12} sm={6} md={3}>
-          <AppWidgetSummary
-            title="Active Trips"
-            total={summary.active_trips || 0}
-            color="success"
-            icon={<img alt="icon" src="/assets/icons/glass/ic_glass_buy.png" />}
-          />
-        </Grid>
+        {/* ROW 1 */}
 
-        <Grid xs={12} sm={6} md={3}>
-          <AppWidgetSummary
-            title="Drivers"
-            total={summary.total_drivers || 0}
-            color="info"
-            icon={<img alt="icon" src="/assets/icons/glass/ic_glass_users.png" />}
-          />
-        </Grid>
+<Grid xs={12} sm={6} md={3}>
+  <AppWidgetSummary
+    title="Today's Sales"
+    total={Number(summary.today_sales || 0)}
+    color="success"
+    icon={<img alt="icon" src="/assets/icons/glass/ic_glass_buy.png" />}
+  />
+</Grid>
 
-        <Grid xs={12} sm={6} md={3}>
-          <AppWidgetSummary
-            title="Farmers"
-            total={summary.total_farmers || 0}
-            color="warning"
-            icon={<img alt="icon" src="/assets/icons/glass/ic_glass_bag.png" />}
-          />
-        </Grid>
+<Grid xs={12} sm={6} md={3}>
+  <AppWidgetSummary
+    title="Today's Collection"
+    total={Number(summary.today_collection || 0)}
+    color="info"
+    icon={<img alt="icon" src="/assets/icons/glass/ic_glass_message.png" />}
+  />
+</Grid>
 
-        <Grid xs={12} sm={6} md={3}>
-          <AppWidgetSummary
-            title="Customers"
-            total={summary.total_customers || 0}
-            color="error"
-            icon={<img alt="icon" src="/assets/icons/glass/ic_glass_message.png" />}
-          />
-        </Grid>
+<Grid xs={12} sm={6} md={3}>
+  <AppWidgetSummary
+    title="Total Pending"
+    total={Number(summary.total_pending || 0)}
+    color="warning"
+    icon={<img alt="icon" src="/assets/icons/glass/ic_glass_bag.png" />}
+  />
+</Grid>
+
+<Grid xs={12} sm={6} md={3}>
+  <AppWidgetSummary
+    title="Birds Sold Today"
+    total={Number(summary.birds_sold_today || 0)}
+    color="error"
+    icon={<img alt="icon" src="/assets/icons/glass/ic_glass_users.png" />}
+  />
+</Grid>
+
+{/* ROW 2 */}
+
+<Grid xs={12} sm={6} md={3}>
+  <AppWidgetSummary
+    title="Active Trips"
+    total={Number(summary.active_trips || 0)}
+    color="primary"
+    icon={<img alt="icon" src="/assets/icons/glass/ic_glass_buy.png" />}
+  />
+</Grid>
+
+<Grid xs={12} sm={6} md={3}>
+  <AppWidgetSummary
+    title="Drivers"
+    total={Number(summary.total_drivers || 0)}
+    color="secondary"
+    icon={<img alt="icon" src="/assets/icons/glass/ic_glass_users.png" />}
+  />
+</Grid>
+
+<Grid xs={12} sm={6} md={3}>
+  <AppWidgetSummary
+    title="Farmers"
+    total={Number(summary.total_farmers || 0)}
+    color="success"
+    icon={<img alt="icon" src="/assets/icons/glass/ic_glass_bag.png" />}
+  />
+</Grid>
+
+<Grid xs={12} sm={6} md={3}>
+  <AppWidgetSummary
+    title="Customers"
+    total={Number(summary.total_customers || 0)}
+    color="warning"
+    icon={<img alt="icon" src="/assets/icons/glass/ic_glass_message.png" />}
+  />
+</Grid>
+
+<Grid xs={12} md={6}>
+  <AppOrderTimeline
+    title="Top Pending Customers"
+    list={topPendingCustomers.map((c, i) => ({
+      id: `${c.id}`,
+      title: `${c.name} - ₹${Number(c.pending_amount).toLocaleString()}`,
+      type: `order${(i % 5) + 1}`,
+      time: null,
+    }))}
+  />
+</Grid>
+
+<Grid xs={12} md={6}>
+  <AppOrderTimeline
+    title="Top Drivers"
+    list={topDrivers.map((d, i) => ({
+      id: `${d.id}`,
+      title: `${d.name} | Trips: ${d.total_trips} | Sales: ₹${Number(
+        d.total_sales
+      ).toLocaleString()}`,
+      type: `order${(i % 5) + 1}`,
+      time: null,
+    }))}
+  />
+</Grid>
 
         {/* ================= WEEKLY SALES ================= */}
 
