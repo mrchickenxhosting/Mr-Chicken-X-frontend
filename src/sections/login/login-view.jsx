@@ -123,7 +123,7 @@ const handleLogin = async () => {
     cursor: 'noneS'
   }}
 >
-  Version 1.1.0
+  Version 1.1.1
 </Typography>
     </>
   );
