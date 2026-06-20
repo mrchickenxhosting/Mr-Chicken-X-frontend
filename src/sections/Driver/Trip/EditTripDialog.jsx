@@ -29,6 +29,7 @@ export default function EditTripDialog({
   const [farmers, setFarmers] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [lifters, setLifters] = useState([])
+  const [sourceDriver, setSourceDriver] = useState(null);
 
   const [farmer, setFarmer] = useState(null);
   const [farm, setFarm] = useState(null);
@@ -41,6 +42,7 @@ export default function EditTripDialog({
 
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
+  const [sourceType, setSourceType] = useState('farmer');
 
   // ----------------------------------------------------------------------
   // Fetch dropdown data
@@ -106,6 +108,7 @@ export default function EditTripDialog({
   // ----------------------------------------------------------------------
 
   const resetForm = () => {
+    setSourceType('farmer');
     setFarmer(null);
     setFarm(null);
     setDriver(null);
@@ -125,9 +128,11 @@ export default function EditTripDialog({
   const handleSave = () => {
     const payload = {
       ...(isEditMode && { id: trip.id }),
-      farm_id: farm.id,
-      driver_id: driver.id,
-      lifter_id: lifter?.id || null,   // ✅ ADD THIS
+      source_type: sourceType,
+       source_driver_id: sourceDriver?.id || null,
+      farm_id: farm?.id,
+      driver_id: driver?.id,
+      lifter_id: lifter?.id || null,
       total_birds: Number(birds),
       trip_time: time,
       trip_date: date ? dayjs(date).format('YYYY-MM-DD') : null,
@@ -144,12 +149,21 @@ export default function EditTripDialog({
   });
 
   const isSaveDisabled =
-    !farmer ||
-    !farm ||
-    !driver ||
-    !birds ||
-    !time ||
-    (contactPhone && contactPhone.length !== 10);
+    sourceType === 'farmer'
+      ? (
+        !farmer ||
+        !farm ||
+        !driver ||
+        !birds ||
+        !time ||
+        (contactPhone && contactPhone.length !== 10)
+      )
+      : (
+        !driver ||
+        !birds ||
+        !time ||
+        (contactPhone && contactPhone.length !== 10)
+      );
 
   const farmerFarms = farmer?.farms || [];
 
@@ -163,9 +177,34 @@ export default function EditTripDialog({
 
       <DialogContent dividers>
         <Stack spacing={4} mt={1}>
+          <Stack spacing={2}>
+            <Typography variant="subtitle1" fontWeight={600}>
+              Source Type
+            </Typography>
+
+            <Autocomplete
+              options={[
+                { value: 'farmer', label: 'Get From Farmer' },
+                { value: 'driver', label: 'Get From Driver' },
+              ]}
+              value={
+                [
+                  { value: 'farmer', label: 'Get From Farmer' },
+                  { value: 'driver', label: 'Get From Driver' },
+                ].find((x) => x.value === sourceType) || null
+              }
+              onChange={(e, value) =>
+                setSourceType(value?.value || 'farmer')
+              }
+              getOptionLabel={(option) => option.label}
+              renderInput={(params) => (
+                <TextField {...params} label="Select Source Type" />
+              )}
+            />
+          </Stack>
 
           {/* ================= FARMER SECTION ================= */}
-          <Stack spacing={2}>
+          {sourceType === 'farmer' && (<Stack spacing={2}>
             <Typography variant="subtitle1" fontWeight={600}>
               Farmer Information
             </Typography>
@@ -219,8 +258,26 @@ export default function EditTripDialog({
                 </Grid>
               )}
             </Grid>
-          </Stack>
+          </Stack>)}
 
+          {/* ================= DRIVER SECTION ================= */}
+          {sourceType === 'driver' && (
+            <Stack spacing={2}>
+              <Typography variant="subtitle1" fontWeight={600}>
+                Driver Information
+              </Typography>
+
+              <Autocomplete
+                options={drivers}
+                value={sourceDriver}
+                onChange={(e, value) => setSourceDriver(value)}
+                getOptionLabel={(option) => option.name || ''}
+                renderInput={(params) => (
+                  <TextField {...params} label="Select Driver" />
+                )}
+              />
+            </Stack>
+          )}
           {/* ================= MAP SECTION ================= */}
           {isLoaded && farm?.latitude && farm?.longitude && (
             <Stack

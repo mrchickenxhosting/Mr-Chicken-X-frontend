@@ -177,46 +177,70 @@ Please reach on time and update status after loading.
         <TableCell>{row.trip_time || '-'}</TableCell>
 
 <TableCell>
-  <Stack spacing={0.3}>
-    <Typography variant="subtitle2">
-      {row.farmer_name || '-'}
-    </Typography>
+  {row.source_type === 'driver' ? (
+    <Stack spacing={0.3}>
+      <Typography variant="subtitle2">
+        🚛 {row.source_driver_name || '-'}
+      </Typography>
 
-    <Typography variant="caption" color="text.secondary">
-      📞 {row.farmer_mobile || ''}
-    </Typography>
+      <Typography variant="caption" color="text.secondary">
+        📞 {row.source_driver_mobile || ''}
+      </Typography>
 
-{row.farm_location && (
-  row.farm_latitude && row.farm_longitude ? (
-    <Typography
-      component="a"
-      href={`https://www.google.com/maps?q=${row.farm_latitude},${row.farm_longitude}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      variant="caption"
-      color="primary"
-      sx={{
-        display: 'block',
-        maxWidth: 180,
-        textDecoration: 'none',
-      }}
-    >
-      📍 {row.farm_location}
-    </Typography>
+      <Typography
+        variant="caption"
+        color="warning.main"
+      >
+        Source: Driver
+      </Typography>
+    </Stack>
   ) : (
-    <Typography
-      variant="caption"
-      color="text.secondary"
-      sx={{ display: 'block', maxWidth: 180 }}
-    >
-      📍 {row.farm_location}
-    </Typography>
-  )
-)}
+    <Stack spacing={0.3}>
+      <Typography variant="subtitle2">
+        👨‍🌾 {row.farmer_name || '-'}
+      </Typography>
 
-  </Stack>
+      <Typography variant="caption" color="text.secondary">
+        📞 {row.farmer_mobile || ''}
+      </Typography>
+
+      {row.farm_location && (
+        row.farm_latitude && row.farm_longitude ? (
+          <Typography
+            component="a"
+            href={`https://www.google.com/maps?q=${row.farm_latitude},${row.farm_longitude}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="caption"
+            color="primary"
+            sx={{
+              display: 'block',
+              maxWidth: 180,
+              textDecoration: 'none',
+            }}
+          >
+            📍 {row.farm_location}
+          </Typography>
+        ) : (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: 'block', maxWidth: 180 }}
+          >
+            📍 {row.farm_location}
+          </Typography>
+        )
+      )}
+
+      <Typography
+        variant="caption"
+        color="success.main"
+      >
+        Source: Farmer
+      </Typography>
+    </Stack>
+  )}
 </TableCell>
-
         <TableCell>
           <Stack spacing={0.3}>
             <Typography variant="subtitle2">

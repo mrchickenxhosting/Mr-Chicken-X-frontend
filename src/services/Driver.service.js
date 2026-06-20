@@ -57,8 +57,12 @@ export const getTripCages = async (tripId) => {
 
 export const sellToCustomer = async ({
   tripId,
+
   customer_id,
-  cage_numbers,   // ✅ ARRAY now
+  target_driver_id,
+  sale_target_type,
+
+  cage_numbers,
   sell_type,
   bird_count,
   weight,
@@ -72,7 +76,10 @@ export const sellToCustomer = async ({
     `driver/trips/${tripId}/sell`,
     {
       customer_id,
-      cage_numbers,   // ✅ send array
+      target_driver_id,
+      sale_target_type,
+
+      cage_numbers,
       sell_type,
       bird_count,
       weight,

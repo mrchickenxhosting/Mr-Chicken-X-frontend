@@ -290,7 +290,7 @@ Please reach on time and update status after loading.
                     { id: 'id', label: 'Trip ID' },
                     { id: 'trip_time', label: 'Date' },
                     { id: 'trip_time', label: 'Time' },
-                    { id: 'farmer_name', label: 'Farmer' },
+                    { id: 'farmer_name', label: 'Farmer/Driver' },
                     { id: 'driver_name', label: 'Driver' },
                     { id: 'lifter_name', label: 'Lifter' },
                     { id: 'contact_person', label: 'Contact Person' },

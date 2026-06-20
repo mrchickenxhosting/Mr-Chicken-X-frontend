@@ -282,15 +282,16 @@ const COLOR_DOT_MAP = {
           options={trips}
           value={trip}
           onChange={handleTripChange}
-          getOptionLabel={(o) =>
-            o
-              ? `Trip #${new Date(o.trip_date).toLocaleDateString('en-IN', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-              })}  • ${o.total_birds} birds • ${o.farmer_name}`
-              : ''
-          }
+  getOptionLabel={(o) => {
+    if (!o) return '';
+
+    const sourceName =
+      o.source_type === 'driver'
+        ? `🚛 ${o.source_driver_name || '-'}`
+        : `👨‍🌾 ${o.farmer_name || '-'}`;
+
+    return `Trip #${o.id} • ${o.total_birds} birds • ${sourceName}`;
+  }}
           renderInput={(p) => <TextField {...p} label="Select Trip" />}
         />
 

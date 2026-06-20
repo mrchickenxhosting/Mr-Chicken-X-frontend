@@ -16,7 +16,7 @@ import {
   DialogContent,
 } from '@mui/material';
 
-import { getallCustomer } from 'src/services/Trader.service';
+import { getallDriver ,getallCustomer } from 'src/services/Trader.service';
 import {
   getTripCages,
   sellToCustomer,
@@ -40,6 +40,7 @@ export default function DriverSalesPage() {
   // ================= CUSTOMER =================
   const [customers, setCustomers] = useState([]);
   const [customer, setCustomer] = useState(null);
+  const [drivers, setDrivers] = useState([]);
 
   // ================= CAGES =================
   const [cages, setCages] = useState([]);
@@ -65,6 +66,7 @@ export default function DriverSalesPage() {
   useEffect(() => {
     getassignedTrips().then((res) => setTrips(res || []));
     getallCustomer().then((res) => setCustomers(res || []));
+    getallDriver().then((res) => setDrivers(res || []));
   }, []);
 
   // ----------------------------------------------------------------------
@@ -224,126 +226,136 @@ export default function DriverSalesPage() {
   // };
 
   const handleSaveSale = async () => {
-  try {
+    try {
 
-    // -------------------------------
-    // PREPARE VALUES (NO TERNARY HELL)
-    // -------------------------------
+      // -------------------------------
+      // PREPARE VALUES (NO TERNARY HELL)
+      // -------------------------------
 
-    let cageNumbers = [];
-    let birdCount = 0;
-    let finalWeight = 0;
-    let finalRate = 0;
-    let finalTotal = 0;
-    let finalSellType = null;
+      let cageNumbers = [];
+      let birdCount = 0;
+      let finalWeight = 0;
+      let finalRate = 0;
+      let finalTotal = 0;
+      let finalSellType = null;
 
-    if (mode === 'SALE') {
-      cageNumbers = selectedCages.map(c => c.cage_number);
-      finalSellType = sellType;
+      if (mode === 'SALE') {
+        cageNumbers = selectedCages.map(c => c.cage_number);
+        finalSellType = sellType;
 
-      if (sellType === 'CUSTOM') {
-        birdCount = Number(count);
-        finalWeight = Number(weight);
+        if (sellType === 'CUSTOM') {
+          birdCount = Number(count);
+          finalWeight = Number(weight);
+        } else {
+          birdCount = null;
+          finalWeight = null;
+        }
+
+        finalRate = Number(rate);
+        finalTotal = totalAmount;
       } else {
-        birdCount = null;
-        finalWeight = null;
+        // PAYMENT MODE
+        cageNumbers = []; // dummy cage number for payment-only entries
+        birdCount = 0;
+        finalWeight = 0;
+        finalRate = 0;
+        finalTotal = Number(payment.cash || 0) + Number(payment.upi || 0);
+        finalSellType = null;
       }
 
-      finalRate = Number(rate);
-      finalTotal = totalAmount;
-    } else {
-      // PAYMENT MODE
-      cageNumbers = []; // dummy cage number for payment-only entries
-      birdCount = 0;
-      finalWeight = 0;
-      finalRate = 0;
-      finalTotal = Number(payment.cash || 0) + Number(payment.upi || 0);
-      finalSellType = null;
-    }
+      // -------------------------------
+      // BUILD PAYLOAD
+      // -------------------------------
 
-    // -------------------------------
-    // BUILD PAYLOAD
-    // -------------------------------
+      const payload = {
+        tripId: trip.id,
+        customer_id:
+          customer.entityType === 'CUSTOMER'
+            ? customer.id
+            : null,
 
-    const payload = {
-      tripId: trip.id,
-      customer_id: customer.id,
+        target_driver_id:
+          customer.entityType === 'DRIVER'
+            ? customer.id
+            : null,
 
-      cage_numbers: cageNumbers,
-      sell_type: finalSellType,
+        sale_target_type: customer.entityType,
 
-      bird_count: birdCount,
-      weight: finalWeight,
-      rate: finalRate,
-      total_amount: finalTotal,
+        cage_numbers: cageNumbers,
+        sell_type: finalSellType,
 
-      payment_mode: paymentMode,
+        bird_count: birdCount,
+        weight: finalWeight,
+        rate: finalRate,
+        total_amount: finalTotal,
 
-      cash_amount:
-        paymentMode === 'CASH' || paymentMode === 'BOTH'
-          ? Number(payment.cash || 0)
-          : 0,
+        payment_mode: paymentMode,
 
-      upi_amount:
-        paymentMode === 'UPI' || paymentMode === 'BOTH'
-          ? Number(payment.upi || 0)
-          : 0,
-    };
+        cash_amount:
+          paymentMode === 'CASH' || paymentMode === 'BOTH'
+            ? Number(payment.cash || 0)
+            : 0,
 
-    console.log(payload);
+        upi_amount:
+          paymentMode === 'UPI' || paymentMode === 'BOTH'
+            ? Number(payment.upi || 0)
+            : 0,
+      };
 
-    await sellToCustomer(payload);
+      console.log(payload); 
 
-    alert(mode === 'SALE' ? 'Sale saved successfully' : 'Payment saved successfully');
+      await sellToCustomer(payload);
 
-    // -------------------------------
-    // REFRESH CAGES
-    // -------------------------------
+      alert(mode === 'SALE' ? 'Sale saved successfully' : 'Payment saved successfully');
 
-    const res = await getTripCages(trip.id);
+      // -------------------------------
+      // REFRESH CAGES
+      // -------------------------------
 
-    const cageArray = Object.entries(res || {}).map(
-      ([cageNumber, cage]) => {
-        let totalBirds = 0;
-        let totalWeight = 0;
+      const res = await getTripCages(trip.id);
 
-        Object.keys(cage || {}).forEach((color) => {
-          cage[color]?.forEach((entry) => {
-            totalBirds += Number(entry.chickens || 0);
-            totalWeight += Number(entry.weight || 0);
+      const cageArray = Object.entries(res || {}).map(
+        ([cageNumber, cage]) => {
+          let totalBirds = 0;
+          let totalWeight = 0;
+
+          Object.keys(cage || {}).forEach((color) => {
+            cage[color]?.forEach((entry) => {
+              totalBirds += Number(entry.chickens || 0);
+              totalWeight += Number(entry.weight || 0);
+            });
           });
-        });
 
-        return {
-          cage_number: Number(cageNumber),
-          remaining_birds: totalBirds,
-          remaining_weight: totalWeight,
-        };
-      }
-    );
+          return {
+            cage_number: Number(cageNumber),
+            remaining_birds: totalBirds,
+            remaining_weight: totalWeight,
+          };
+        }
+      );
 
-    setCages(cageArray);
+      setCages(cageArray);
 
-    // -------------------------------
-    // RESET EVERYTHING
-    // -------------------------------
+      // -------------------------------
+      // RESET EVERYTHING
+      // -------------------------------
 
-    setCustomer(null);
-    setSelectedCages([]);
-    setSellType('FULL');
-    setCount('');
-    setWeight('');
-    setRate('');
-    setCalcBy('WEIGHT');
-    setPaymentMode('NONE');
-    setPayment({ cash: '', upi: '' });
-    setMode(null); // 🔥 IMPORTANT
+      setCustomer(null);
+      setSelectedCages([]);
+      setSellType('FULL');
+      setCount('');
+      setWeight('');
+      setRate('');
+      setCalcBy('WEIGHT');
+      setPaymentMode('NONE');
+      setPayment({ cash: '', upi: '' });
+      setMode(null); // 🔥 IMPORTANT
 
-  } catch (err) {
-    console.error(err);
-    alert(err?.response?.data?.message || 'Failed to save');
-  }
-};
+    } catch (err) {
+      console.error(err);
+      alert(err?.response?.data?.message || 'Failed to save');
+    }
+  };
 
   // ----------------------------------------------------------------------
   // UPI QR
@@ -370,6 +382,17 @@ export default function DriverSalesPage() {
     return 'background.paper';
   };
 
+  const customerOptions = [
+    ...customers.map((c) => ({
+      ...c,
+      entityType: 'CUSTOMER',
+    })),
+    ...drivers.map((d) => ({
+      ...d,
+      entityType: 'DRIVER',
+    })),
+  ];
+
   return (
     <Stack spacing={3}>
       <Typography variant="h5">Sales Entry</Typography>
@@ -382,13 +405,16 @@ export default function DriverSalesPage() {
             setTrip(v);
             setTripLocked(true);
           }}
-          getOptionLabel={(o) => o
-            ? `Trip #${new Date(o.trip_date).toLocaleDateString('en-IN', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            })}  • ${o.total_birds} birds • ${o.farmer_name}`
-            : ''}
+  getOptionLabel={(o) => {
+    if (!o) return '';
+
+    const sourceName =
+      o.source_type === 'driver'
+        ? `🚛 ${o.source_driver_name || '-'}`
+        : `👨‍🌾 ${o.farmer_name || '-'}`;
+
+    return `Trip #${o.id} • ${o.total_birds} birds • ${sourceName}`;
+  }}  
           renderInput={(p) => <TextField {...p} label="Select Trip" />}
         />
 
@@ -431,7 +457,7 @@ export default function DriverSalesPage() {
       {trip && !allCagesSold && (
         <Card sx={{ p: 2 }}>
           <Autocomplete
-            options={customers}
+            options={customerOptions}
             value={customer}
             // onChange={(e, v) => setCustomer(v)}
             onChange={(e, v) => {
@@ -444,7 +470,11 @@ export default function DriverSalesPage() {
               }
             }}
             getOptionLabel={(o) =>
-              o ? `${o.name} • ₹ ${Math.round(Number(o.outstanding || 0)).toLocaleString()}` : ''
+              o
+                ? `${o.entityType === 'DRIVER' ? '🚛 ' : ''}${o.name} • ₹ ${Math.round(
+                  Number(o.outstanding || 0)
+                ).toLocaleString()}`
+                : ''
             }
             renderOption={(props, option) => (
               <li {...props}>
@@ -454,6 +484,14 @@ export default function DriverSalesPage() {
                   <div>
                     <div style={{ fontWeight: 600 }}>{option.name} • {option.mobile} • {option.city}</div>
                   </div>
+
+                  {option.entityType === 'DRIVER' && (
+                    <Chip
+                      label="Driver"
+                      size="small"
+                      color="warning"
+                    />
+                  )}
 
                   {/* Outstanding Red Box */}
                   {Number(option.outstanding) > 0 && (
@@ -481,38 +519,38 @@ export default function DriverSalesPage() {
       )}
 
       <Dialog open={openModeDialog}>
-  <DialogTitle>What do you want to do?</DialogTitle>
+        <DialogTitle>What do you want to do?</DialogTitle>
 
-  <DialogContent>
-    <Stack spacing={2} mt={1}>
-      <Button
-        variant="contained"
-        onClick={() => {
-          setMode('SALE');
-          setOpenModeDialog(false);
-        }}
-      >
-        Make Sale
-      </Button>
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <Button
+              variant="contained"
+              onClick={() => {
+                setMode('SALE');
+                setOpenModeDialog(false);
+              }}
+            >
+              Make Sale
+            </Button>
 
-      <Button
-  variant="outlined"
-  onClick={() => {
-    setMode('PAYMENT');
-    setOpenModeDialog(false);
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setMode('PAYMENT');
+                setOpenModeDialog(false);
 
-    // 🔥 IMPORTANT
-    setSelectedCages([]);
-    setCount(0);
-    setWeight(0);
-    setRate(0);
-  }}
->
-  Take Payment Only
-</Button>
-    </Stack>
-  </DialogContent>
-</Dialog>
+                // 🔥 IMPORTANT
+                setSelectedCages([]);
+                setCount(0);
+                setWeight(0);
+                setRate(0);
+              }}
+            >
+              Take Payment Only
+            </Button>
+          </Stack>
+        </DialogContent>
+      </Dialog>
 
       {/* MULTI CAGE */}
       {customer && mode === 'SALE' && (
@@ -593,7 +631,7 @@ export default function DriverSalesPage() {
       )}
 
       {/* SALE */}
-     {mode === 'SALE' && selectedCages.length > 0 && (
+      {mode === 'SALE' && selectedCages.length > 0 && (
         <>
           <Card sx={{ p: 2 }}>
             <Grid container spacing={2}>
@@ -726,76 +764,76 @@ export default function DriverSalesPage() {
       )}
 
       {mode === 'PAYMENT' && (
-  <>
-
-
-    <Card sx={{ p: 2 }}>
-      <TextField
-        select
-        label="Payment Mode"
-        value={paymentMode}
-        onChange={(e) => setPaymentMode(e.target.value)}
-        fullWidth
-      >
-        {PAYMENT_MODES.map((m) => (
-          <MenuItem key={m} value={m}>
-            {m}
-          </MenuItem>
-        ))}
-      </TextField>
-
-      {(paymentMode === 'CASH' || paymentMode === 'BOTH') && (
-        <TextField
-          sx={{ mt: 2 }}
-          label="Cash Amount"
-          value={payment.cash}
-          onChange={(e) =>
-            setPayment((p) => ({ ...p, cash: e.target.value }))
-          }
-          fullWidth
-        />
-      )}
-
-      {(paymentMode === 'UPI' || paymentMode === 'BOTH') && (
         <>
-          <TextField
-            sx={{ mt: 2 }}
-            label="UPI Amount"
-            value={payment.upi}
-            onChange={(e) =>
-              setPayment((p) => ({ ...p, upi: e.target.value }))
-            }
-            fullWidth
-          />
 
-          {payment.upi && trip?.trader_upi_id && (
-            <Stack alignItems="center" mt={3} spacing={1}>
-              <Typography variant="subtitle2">
-                Scan To Pay ₹{payment.upi}
-              </Typography>
 
-              <QRCodeCanvas
-                value={generateUpiQrValue()}
-                size={220}
-                level="H"
-                includeMargin
+          <Card sx={{ p: 2 }}>
+            <TextField
+              select
+              label="Payment Mode"
+              value={paymentMode}
+              onChange={(e) => setPaymentMode(e.target.value)}
+              fullWidth
+            >
+              {PAYMENT_MODES.map((m) => (
+                <MenuItem key={m} value={m}>
+                  {m}
+                </MenuItem>
+              ))}
+            </TextField>
+
+            {(paymentMode === 'CASH' || paymentMode === 'BOTH') && (
+              <TextField
+                sx={{ mt: 2 }}
+                label="Cash Amount"
+                value={payment.cash}
+                onChange={(e) =>
+                  setPayment((p) => ({ ...p, cash: e.target.value }))
+                }
+                fullWidth
               />
-            </Stack>
-          )}
+            )}
+
+            {(paymentMode === 'UPI' || paymentMode === 'BOTH') && (
+              <>
+                <TextField
+                  sx={{ mt: 2 }}
+                  label="UPI Amount"
+                  value={payment.upi}
+                  onChange={(e) =>
+                    setPayment((p) => ({ ...p, upi: e.target.value }))
+                  }
+                  fullWidth
+                />
+
+                {payment.upi && trip?.trader_upi_id && (
+                  <Stack alignItems="center" mt={3} spacing={1}>
+                    <Typography variant="subtitle2">
+                      Scan To Pay ₹{payment.upi}
+                    </Typography>
+
+                    <QRCodeCanvas
+                      value={generateUpiQrValue()}
+                      size={220}
+                      level="H"
+                      includeMargin
+                    />
+                  </Stack>
+                )}
+              </>
+            )}
+          </Card>
+
+          <Button
+            variant="contained"
+            size="large"
+            onClick={handleSaveSale}
+            disabled={!paymentMode}
+          >
+            Save Payment
+          </Button>
         </>
       )}
-    </Card>
-
-    <Button
-      variant="contained"
-      size="large"
-      onClick={handleSaveSale}
-      disabled={!paymentMode}
-    >
-      Save Payment
-    </Button>
-  </>
-)}
     </Stack>
   );
 }
