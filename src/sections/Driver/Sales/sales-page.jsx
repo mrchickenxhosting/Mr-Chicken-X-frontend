@@ -553,82 +553,195 @@ export default function DriverSalesPage() {
       </Dialog>
 
       {/* MULTI CAGE */}
-      {customer && mode === 'SALE' && (
-        <Card sx={{ p: 2 }}>
-          <Typography variant="subtitle1" sx={{ mb: 2 }}>
-            Select Cage(s)
-          </Typography>
+{customer && mode === 'SALE' && (
+  <Card sx={{ p: 2 }}>
+    <Typography variant="subtitle1" sx={{ mb: 2 }}>
+      Select Cage(s)
+    </Typography>
 
-          <Grid container spacing={2}>
-            {cages.map((cage) => {
-              const isSelected = selectedCages.some(
-                (c) => c.cage_number === cage.cage_number
-              );
+    <Grid container spacing={2}>
+      {cages.map((cage) => {
+        const isSelected = selectedCages.some(
+          (c) => c.cage_number === cage.cage_number
+        );
 
-              const isDisabled = cage.remaining_birds <= 0;
+        const isDisabled = cage.remaining_birds <= 0;
 
-              return (
-                <Grid item xs={4} sm={3} md={2} key={cage.cage_number}>
-                  <Card
-                    onClick={() => {
-                      if (isDisabled) return;
+        const approxRate = Number(trip?.approx_rate || 0);
+        const maxRate = approxRate + 15;
 
-                      if (isSelected) {
-                        setSelectedCages((prev) =>
-                          prev.filter(
-                            (c) => c.cage_number !== cage.cage_number
-                          )
-                        );
-                      } else {
-                        setSelectedCages((prev) => [...prev, cage]);
-                      }
-                    }}
-                    sx={{
-                      p: 1.5,
-                      cursor: isDisabled ? 'not-allowed' : 'pointer',
-                      textAlign: 'center',
-                      bgcolor: getCageBgColor(isSelected, isDisabled),
-                      opacity: isDisabled ? 0.5 : 1,
-                      border: isSelected ? '2px solid' : '1px solid',
-                      borderColor: isSelected ? 'primary.main' : 'divider',
-                    }}
-                  >
-                    <Typography variant="subtitle2">
-                      #{cage.cage_number}
-                    </Typography>
+        const cageWeight = Number(cage.remaining_weight || 0);
 
-                    <Typography variant="caption">
-                      🐔 {cage.remaining_birds}
-                    </Typography>
+        const minAmount = approxRate * cageWeight;
+        const maxAmount = maxRate * cageWeight;
 
-                    <Typography variant="caption">
-                      ⚖ {cage.remaining_weight} kg
-                    </Typography>
+        return (
+          <Grid item xs={4} sm={3} md={2} key={cage.cage_number}>
+            <Card
+              onClick={() => {
+                if (isDisabled) return;
 
-                    {isDisabled && (
-                      <Typography variant="caption" color="error">
-                        Sold
-                      </Typography>
-                    )}
-                  </Card>
-                </Grid>
-              );
-            })}
+                if (isSelected) {
+                  setSelectedCages((prev) =>
+                    prev.filter(
+                      (c) => c.cage_number !== cage.cage_number
+                    )
+                  );
+                } else {
+                  setSelectedCages((prev) => [...prev, cage]);
+                }
+              }}
+              sx={{
+                p: 1.5,
+                cursor: isDisabled ? 'not-allowed' : 'pointer',
+                textAlign: 'center',
+                bgcolor: getCageBgColor(isSelected, isDisabled),
+                opacity: isDisabled ? 0.5 : 1,
+                border: isSelected ? '2px solid' : '1px solid',
+                borderColor: isSelected ? 'primary.main' : 'divider',
+                transition: '0.2s',
+              }}
+            >
+              <Typography variant="subtitle2">
+                Cage #{cage.cage_number}
+              </Typography>
+
+              <Typography variant="caption" display="block">
+                🐔 {cage.remaining_birds}
+              </Typography>
+
+              <Typography variant="caption" display="block">
+                ⚖ {cageWeight.toFixed(2)} kg
+              </Typography>
+
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  mt: 1,
+                  fontWeight: 700,
+                  color: 'success.main',
+                }}
+              >
+                ₹{minAmount.toFixed(0)} - ₹{maxAmount.toFixed(0)}
+              </Typography>
+
+              
+
+              {isDisabled && (
+                <Typography
+                  variant="caption"
+                  color="error"
+                  display="block"
+                  sx={{ mt: 0.5 }}
+                >
+                  Sold
+                </Typography>
+              )}
+            </Card>
           </Grid>
+        );
+      })}
+    </Grid>
 
+    {/* Expected Sale Range */}
+    {selectedCages.length > 0 && (
+      <Card
+        variant="outlined"
+        sx={{
+          mt: 3,
+          p: 2,
+          bgcolor: 'success.lighter',
+        }}
+      >
+        <Typography variant="subtitle2" gutterBottom>
+          Expected Sale Range
+        </Typography>
 
-          <Stack direction="row" spacing={1} mt={2}>
-            {SELL_TYPES.map((s) => (
-              <Chip
-                key={s.value}
-                label={s.label}
-                color={sellType === s.value ? 'primary' : 'default'}
-                onClick={() => setSellType(s.value)}
-              />
-            ))}
-          </Stack>
-        </Card>
-      )}
+        {selectedCages.map((cage) => {
+          const cageWeight = Number(cage.remaining_weight || 0);
+
+          const minRate = Number(trip?.approx_rate || 0);
+          const maxRate = minRate + 15;
+
+          const minAmount = cageWeight * minRate;
+          const maxAmount = cageWeight * maxRate;
+
+          return (
+            <Stack
+              key={cage.cage_number}
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{
+                py: 1,
+                borderBottom: '1px dashed',
+                borderColor: 'divider',
+              }}
+            >
+              <Typography fontWeight={600}>
+                Cage #{cage.cage_number}
+              </Typography>
+
+              <Stack alignItems="flex-end">
+                <Typography fontWeight={700}>
+                  ₹{minAmount.toFixed(0)} - ₹{maxAmount.toFixed(0)}
+                </Typography>
+
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                >
+                  ₹{minRate} - ₹{maxRate} × {cageWeight.toFixed(2)} kg
+                </Typography>
+              </Stack>
+            </Stack>
+          );
+        })}
+
+        <Typography
+          variant="h6"
+          textAlign="right"
+          mt={2}
+          color="success.main"
+          fontWeight={700}
+        >
+          Expected Total : ₹
+          {selectedCages
+            .reduce(
+              (sum, cage) =>
+                sum +
+                Number(cage.remaining_weight || 0) *
+                  Number(trip?.approx_rate || 0),
+              0
+            )
+            .toFixed(0)}
+          {' - '}
+          ₹
+          {selectedCages
+            .reduce(
+              (sum, cage) =>
+                sum +
+                Number(cage.remaining_weight || 0) *
+                  (Number(trip?.approx_rate || 0) + 15),
+              0
+            )
+            .toFixed(0)}
+        </Typography>
+      </Card>
+    )}
+
+    <Stack direction="row" spacing={1} mt={2}>
+      {SELL_TYPES.map((s) => (
+        <Chip
+          key={s.value}
+          label={s.label}
+          color={sellType === s.value ? 'primary' : 'default'}
+          onClick={() => setSellType(s.value)}
+        />
+      ))}
+    </Stack>
+  </Card>
+)}
 
       {/* SALE */}
       {mode === 'SALE' && selectedCages.length > 0 && (

@@ -173,12 +173,21 @@ export default function ReportPage() {
   // --------------------------------------------------
   // TOTALS
 
-  const totalSales = rows.reduce(
+  
+  const salesRows = rows.filter(
+    (row) => Number(row.bird_count) > 0
+  );
+  
+  const paymentRows = rows.filter(
+    (row) => Number(row.bird_count) === 0
+  );
+
+  const totalSales = salesRows.reduce(
     (sum, row) => sum + safeNumber(row.total_sales || row.total_amount),
     0
   );
 
-  const totalPending = rows.reduce(
+  const totalPending = salesRows.reduce(
     (sum, row) => sum + safeNumber(row.pending_amount || row.pending),
     0
   );
@@ -189,12 +198,12 @@ export default function ReportPage() {
   const totalLiftedBirds = Number(selectedTrip?.total_birds || 0);
   const totalWeight = Number(selectedTrip?.total_weight || 0);
 
-  const totalSoldBirds = rows.reduce(
+  const totalSoldBirds = salesRows.reduce(
     (sum, row) => sum + Number(row.bird_count || 0),
     0
   );
 
-  const totalSoldWeight = rows.reduce(
+  const totalSoldWeight = salesRows.reduce(
     (sum, row) => sum + Number(row.weight || 0),
     0
   );
@@ -611,7 +620,7 @@ export default function ReportPage() {
                     </TableCell>
 
                     <TableCell align="right">
-                      ₹{rows
+                      ₹{salesRows
                         .reduce(
                           (s, r) => s + safeNumber(r.pending_amount),
                           0
@@ -623,7 +632,7 @@ export default function ReportPage() {
                       align="right"
                       sx={{
                         color:
-                          rows.reduce(
+                          salesRows.reduce(
                             (s, r) => s + safeNumber(r.profit_loss),
                             0
                           ) >= 0
@@ -631,7 +640,7 @@ export default function ReportPage() {
                             : "error.main",
                       }}
                     >
-                      ₹{rows
+                      ₹{salesRows
                         .reduce(
                           (s, r) => s + safeNumber(r.profit_loss),
                           0
@@ -664,7 +673,7 @@ export default function ReportPage() {
       </TableHead>
 
       <TableBody>
-        {rows.map((row) => (
+        {salesRows.map((row) => (
           <TableRow key={row.id} hover>
             <TableCell>
               {formatDate(row.sale_date)}
@@ -726,14 +735,14 @@ export default function ReportPage() {
           </TableCell>
 
           <TableCell align="center">
-            {rows.reduce(
+            {salesRows.reduce(
               (s, r) => s + safeNumber(r.bird_count),
               0
             )}
           </TableCell>
 
           <TableCell align="center">
-            {rows
+            {salesRows
               .reduce(
                 (s, r) => s + safeNumber(r.weight),
                 0
@@ -1011,6 +1020,94 @@ export default function ReportPage() {
       </Card>
     </Grid>
   </Grid>
+)}
+
+{selectedTrip && paymentRows.length > 0 && (
+  <Card sx={{ p: 3, mt: 3 }}>
+    <Typography variant="h6" mb={2}>
+      Payments Only
+    </Typography>
+
+    <TableContainer>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell>Date</TableCell>
+            <TableCell>Customer</TableCell>
+            <TableCell align="right">Cash</TableCell>
+            <TableCell align="right">UPI</TableCell>
+            <TableCell align="right">Total</TableCell>
+          </TableRow>
+        </TableHead>
+
+        <TableBody>
+          {paymentRows.map((row) => (
+            <TableRow key={row.id}>
+              <TableCell>
+                {formatDate(row.sale_date)}
+              </TableCell>
+
+              <TableCell>
+                {row.customer_name}
+              </TableCell>
+
+              <TableCell align="right">
+                ₹{safeNumber(row.cash_amount).toLocaleString()}
+              </TableCell>
+
+              <TableCell align="right">
+                ₹{safeNumber(row.upi_amount).toLocaleString()}
+              </TableCell>
+
+              <TableCell align="right">
+                ₹{safeNumber(row.total_amount).toLocaleString()}
+              </TableCell>
+            </TableRow>
+          ))}
+
+          <TableRow
+            sx={{
+              "& td": {
+                fontWeight: 700,
+                borderTop: "2px solid",
+              },
+            }}
+          >
+            <TableCell colSpan={2}>
+              TOTAL
+            </TableCell>
+
+            <TableCell align="right">
+              ₹{paymentRows
+                .reduce(
+                  (s, r) => s + safeNumber(r.cash_amount),
+                  0
+                )
+                .toLocaleString()}
+            </TableCell>
+
+            <TableCell align="right">
+              ₹{paymentRows
+                .reduce(
+                  (s, r) => s + safeNumber(r.upi_amount),
+                  0
+                )
+                .toLocaleString()}
+            </TableCell>
+
+            <TableCell align="right">
+              ₹{paymentRows
+                .reduce(
+                  (s, r) => s + safeNumber(r.total_amount),
+                  0
+                )
+                .toLocaleString()}
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </TableContainer>
+  </Card>
 )}
 
     </Stack>

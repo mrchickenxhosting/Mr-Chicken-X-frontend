@@ -37,6 +37,7 @@ export default function EditTripDialog({
   const [lifter, setLifter] = useState(null);
 
   const [date, setDate] = useState(null);
+  const [approxRate, setApproxRate] = useState('');
   const [birds, setBirds] = useState('');
   const [time, setTime] = useState('');
 
@@ -96,7 +97,7 @@ export default function EditTripDialog({
     setDriver(selectedDriver || null);
     setLifter(selectedLifter || null);
 
-
+    setApproxRate(trip.approx_rate || '');
     setBirds(trip.total_birds || '');
     setTime(trip.trip_time?.slice(0, 5) || '');
     setDate(trip.trip_date ? dayjs(trip.trip_date) : null);
@@ -118,6 +119,7 @@ export default function EditTripDialog({
     setTime('');
     setContactName('');
     setContactPhone('');
+    setApproxRate('');
   };
 
   const handleClose = () => {
@@ -129,11 +131,12 @@ export default function EditTripDialog({
     const payload = {
       ...(isEditMode && { id: trip.id }),
       source_type: sourceType,
-       source_driver_id: sourceDriver?.id || null,
+      source_driver_id: sourceDriver?.id || null,
       farm_id: farm?.id,
       driver_id: driver?.id,
       lifter_id: lifter?.id || null,
       total_birds: Number(birds),
+      approx_rate: Number(approxRate),
       trip_time: time,
       trip_date: date ? dayjs(date).format('YYYY-MM-DD') : null,
       contact_name: contactName,
@@ -419,6 +422,18 @@ export default function EditTripDialog({
                   fullWidth
                 />
               </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  label="Approx. Selling Rate (₹)"
+                  type="number"
+                  value={approxRate}
+                  onChange={(e) => setApproxRate(e.target.value)}
+                  fullWidth
+                  inputProps={{ min: 0, step: "0.01" }}
+                />
+              </Grid>
+
 
               <Grid item xs={12} sm={4}>
                 <DatePicker

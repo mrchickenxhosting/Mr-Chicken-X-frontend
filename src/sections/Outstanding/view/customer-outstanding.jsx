@@ -131,6 +131,7 @@ export default function CustomerOutstandingPage() {
                   onRequestSort={handleSort}
                   onSelectAllClick={handleSelectAllClick}
                   headLabel={[
+                    { id: 'name', label: 'Customer Code' },
                     { id: 'name', label: 'Customer' },
                     { id: 'mobile', label: 'Mobile No.' },
                     { id: 'address', label: 'Outstanding ' },

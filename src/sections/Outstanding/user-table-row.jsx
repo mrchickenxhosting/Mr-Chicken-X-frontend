@@ -118,6 +118,9 @@ Thank you for your cooperation.
     <>
       <TableRow hover tabIndex={-1}>
 
+        <TableCell>
+          <Label variant="soft">{row.custom_customer_code}</Label>
+        </TableCell>
         <TableCell>{row.name}</TableCell>
 
         <TableCell>{row.mobile}</TableCell>
@@ -210,52 +213,52 @@ Thank you for your cooperation.
       </Dialog>
 
       <Dialog
-  open={openUpdateDialog}
-  onClose={() => setOpenUpdateDialog(false)}
->
-  <DialogTitle>Confirm Outstanding Update</DialogTitle>
+        open={openUpdateDialog}
+        onClose={() => setOpenUpdateDialog(false)}
+      >
+        <DialogTitle>Confirm Outstanding Update</DialogTitle>
 
-  <DialogContent>
-    <DialogContentText>
-      Are you sure you want to update outstanding to{' '}
-      <strong>₹ {Number(newOutstanding).toLocaleString()}</strong>{' '}
-      for customer{' '}
-      <strong>{row.name}</strong>?
-    </DialogContentText>
-  </DialogContent>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to update outstanding to{' '}
+            <strong>₹ {Number(newOutstanding).toLocaleString()}</strong>{' '}
+            for customer{' '}
+            <strong>{row.name}</strong>?
+          </DialogContentText>
+        </DialogContent>
 
-  <DialogActions>
-    <Button
-      onClick={() => {
-        setOpenUpdateDialog(false);
-        setEditing(false);
-      }}
-    >
-      Cancel
-    </Button>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setOpenUpdateDialog(false);
+              setEditing(false);
+            }}
+          >
+            Cancel
+          </Button>
 
-    <Button
-      variant="contained"
-      color="primary"
-      onClick={async () => {
-        try {
-          await UpdateCustomer(row.customer_id, {
-            has_outstanding: true,
-            opening_balance: Number(newOutstanding),
-          });
-          fetchCustomers()
-          setOpenUpdateDialog(false);
-          setEditing(false);
-        } catch (err) {
-          console.error(err);
-          alert('Failed to update outstanding');
-        }
-      }}
-    >
-      Yes, Update
-    </Button>
-  </DialogActions>
-</Dialog>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={async () => {
+              try {
+                await UpdateCustomer(row.customer_id, {
+                  has_outstanding: true,
+                  opening_balance: Number(newOutstanding),
+                });
+                fetchCustomers()
+                setOpenUpdateDialog(false);
+                setEditing(false);
+              } catch (err) {
+                console.error(err);
+                alert('Failed to update outstanding');
+              }
+            }}
+          >
+            Yes, Update
+          </Button>
+        </DialogActions>
+      </Dialog>
 
     </>
   );
@@ -264,6 +267,7 @@ Thank you for your cooperation.
 CustomerOutstandingRow.propTypes = {
   row: PropTypes.shape({
     customer_id: PropTypes.number,
+    custom_customer_code: PropTypes.string,
     name: PropTypes.string,
     mobile: PropTypes.string,
     outstanding: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -271,6 +275,6 @@ CustomerOutstandingRow.propTypes = {
     customer_type: PropTypes.string,
   }),
   onCreditConfirm: PropTypes.func,
-  fetchCustomers:PropTypes.func
+  fetchCustomers: PropTypes.func
 
 };

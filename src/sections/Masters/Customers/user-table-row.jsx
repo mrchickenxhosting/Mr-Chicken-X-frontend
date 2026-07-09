@@ -55,7 +55,7 @@ export default function UserTableRow({
       >
         {/* CUSTOMER CODE */}
         <TableCell>
-          <Label variant="soft">{row.customer_code}</Label>
+          <Label variant="soft">{row.custom_customer_code}</Label>
         </TableCell>
 
         {/* CUSTOMER NAME */}

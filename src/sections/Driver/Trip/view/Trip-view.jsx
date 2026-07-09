@@ -295,6 +295,7 @@ Please reach on time and update status after loading.
                     { id: 'lifter_name', label: 'Lifter' },
                     { id: 'contact_person', label: 'Contact Person' },
                     { id: 'total_birds', label: 'Birds' },
+                    { id: 'approx_rate', label: 'Approx. Rate' },
                     { id: 'status', label: 'Status' },
                     { id: 'whatsapp', label: 'WhatsApp' },
                     { id: '' },

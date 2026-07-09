@@ -181,6 +181,12 @@ ${
             <strong>Birds:</strong> {row.total_birds}
           </Typography>
         </Stack>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Iconify icon="eva:cube-fill" width={16} />
+          <Typography variant="body2">
+            <strong>Approx Rate:</strong> {row.approx_rate}
+          </Typography>
+        </Stack>
 
         {/* WHATSAPP */}
         <Button

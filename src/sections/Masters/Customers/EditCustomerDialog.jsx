@@ -24,6 +24,7 @@ import {
 // INITIAL FORM STATE (IMPORTANT: keep outside component)
 
 const INITIAL_FORM = {
+  custom_customer_code: '', // <-- Add this
   name: '',
   shop_name: '',
   mobile: '',
@@ -57,10 +58,16 @@ export default function EditCustomerDialog({ open, onClose, customer, onSave }) 
 
     if (customer) {
       // Edit mode → prefill
-      setForm({ ...INITIAL_FORM, ...customer });
+      setForm({
+  ...INITIAL_FORM,
+  ...customer,
+
+  has_outstanding: Number(customer.outstanding || 0) > 0,
+  opening_balance: customer.outstanding || '',
+});
     } else {
       // Create mode → reset
-      setForm(INITIAL_FORM);
+setForm({ ...INITIAL_FORM });
     }
   }, [customer, open]);
 
@@ -70,18 +77,24 @@ export default function EditCustomerDialog({ open, onClose, customer, onSave }) 
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleClose = () => {
-    setForm(INITIAL_FORM);
-    onClose();
+const handleClose = () => {
+  setForm({ ...INITIAL_FORM });
+  onClose();
+};  
+
+const handleSave = () => {
+  const payload = {
+    ...(isEditMode && { id: customer.id }),
+    ...form,
   };
 
-  const handleSave = () => {
-    const payload = {
-      ...(isEditMode && { id: customer.id }),
-      ...form,
-    };
-    onSave(payload);
-  };
+  console.log(
+    isEditMode ? 'Update Customer Payload:' : 'Register Customer Payload:',
+    payload
+  );
+
+  onSave(payload);
+};
 
   // ----------------------------------------------------------------------
 
@@ -118,6 +131,19 @@ export default function EditCustomerDialog({ open, onClose, customer, onSave }) 
                   onChange={(e) => handleChange('shop_name', e.target.value)}
                 />
               </Grid>
+
+              <Grid item xs={12} md={6}>
+  <TextField
+    label="Custom Customer Code"
+    placeholder="Enter custom customer code"
+    fullWidth
+    value={form.custom_customer_code}
+    onChange={(e) =>
+      handleChange('custom_customer_code', e.target.value.toUpperCase())
+    }
+    helperText="Optional (e.g. CUST001)"
+  />
+</Grid>
 
               <Grid item xs={12} md={6}>
                 <TextField

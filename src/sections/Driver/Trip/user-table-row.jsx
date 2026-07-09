@@ -279,6 +279,7 @@ Please reach on time and update status after loading.
         </TableCell>
 
         <TableCell>{row.total_birds}</TableCell>
+        <TableCell>{row.approx_rate}</TableCell>
 
         <TableCell>
           <Label variant="soft" color={statusColor(row.status)}>
