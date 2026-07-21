@@ -182,31 +182,28 @@ export default function ReportPage() {
     (row) => Number(row.bird_count) === 0
   );
 
-  const totalSales = salesRows.reduce(
-    (sum, row) => sum + safeNumber(row.total_sales || row.total_amount),
-    0
-  );
+const isSummaryMode = !selectedTrip && !selectedCustomer;
 
-  const totalPending = salesRows.reduce(
-    (sum, row) => sum + safeNumber(row.pending_amount || row.pending),
-    0
-  );
+const totalSales = isSummaryMode
+  ? rows.reduce((sum, row) => sum + safeNumber(row.total_sales), 0)
+  : salesRows.reduce((sum, row) => sum + safeNumber(row.total_amount), 0);
 
+  const totalPending = isSummaryMode
+  ? rows.reduce((sum, row) => sum + safeNumber(row.pending_amount), 0)
+  : salesRows.reduce((sum, row) => sum + safeNumber(row.pending), 0); 
   // --------------------------------------------------
   // TRIP ANALYTICS (ONLY FOR TRIP MODE)
 
   const totalLiftedBirds = Number(selectedTrip?.total_birds || 0);
   const totalWeight = Number(selectedTrip?.total_weight || 0);
 
-  const totalSoldBirds = salesRows.reduce(
-    (sum, row) => sum + Number(row.bird_count || 0),
-    0
-  );
+ const totalSoldBirds = isSummaryMode
+  ? rows.reduce((sum, row) => sum + safeNumber(row.total_birds), 0)
+  : salesRows.reduce((sum, row) => sum + safeNumber(row.bird_count), 0);
 
-  const totalSoldWeight = salesRows.reduce(
-    (sum, row) => sum + Number(row.weight || 0),
-    0
-  );
+  const totalSoldWeight = isSummaryMode
+  ? rows.reduce((sum, row) => sum + safeNumber(row.total_weight), 0)
+  : salesRows.reduce((sum, row) => sum + safeNumber(row.weight), 0);
 
   const remainingBirds = totalLiftedBirds - totalSoldBirds;
 
