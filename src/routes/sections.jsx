@@ -7,6 +7,7 @@ import DashboardLayout from 'src/layouts/dashboard';
 
 // ================= PAGES =================
 export const LoginPage = lazy(() => import('src/pages/login'));
+export const ChangePasswordPage = lazy(() =>import('src/pages/change-password'));
 export const IndexPage = lazy(() => import('src/pages/dashboard'));
 
 export const ManagerPage = lazy(() => import('src/pages/Masters/managers'));
@@ -80,6 +81,16 @@ export default function Router() {
 
     // Public
     { path: 'login', element: <LoginPage /> },
+    {
+  path: 'change-password',
+  element: isAuthenticated() ? (
+    <Suspense>
+      <ChangePasswordPage />
+    </Suspense>
+  ) : (
+    <Navigate to="/login" replace />
+  ),
+},
     { path: '404', element: <Page404 /> },
     { path: '*', element: <Navigate to="/404" replace /> },
   ]);

@@ -4,6 +4,7 @@ export const setSession = (data) => {
 
 export const getSession = () => {
   const raw = sessionStorage.getItem('session');
+
   return raw ? JSON.parse(raw) : null;
 };
 
@@ -13,7 +14,9 @@ export const clearSession = () => {
 
 export const isAuthenticated = () => !!getSession()?.token;
 
-
 export const getUser = () => getSession()?.user;
 
 export const getRole = () => getSession()?.user?.role;
+
+export const mustChangePassword = () =>
+  getSession()?.user?.mustChangePassword === true;

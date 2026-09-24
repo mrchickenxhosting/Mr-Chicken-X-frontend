@@ -36,27 +36,59 @@ export default function LoginView() {
 
 const handleLogin = async () => {
   try {
-    setLoading(true); // start loading
+    setLoading(true);
 
     const res = await api.post('/auth/login', {
-      mobile, // reuse email field as mobile
+      mobile,
       password,
     });
 
+    const {
+      token,
+      user,
+      mustChangePassword,
+    } = res.data;
+
+
+    /* =====================================================
+       SAVE SESSION
+    ===================================================== */
+
     setSession({
-      token: res.data.token,
-      user: res.data.user,
+      token,
+      user,
     });
 
-    const redirectTo = getDefaultRouteByRole(res.data.user);
-    router.replace(redirectTo);
-  } catch (error) {
-    alert(error.response?.data?.message || 'Login failed');
-  }finally {
-    setLoading(false); // stop loading always
-  }
-};
 
+    /* =====================================================
+       FORCE PASSWORD CHANGE
+    ===================================================== */
+
+    if (mustChangePassword) {
+      router.replace('/change-password');
+      return;
+    }
+
+
+    /* =====================================================
+       NORMAL LOGIN
+    ===================================================== */
+
+    const redirectTo = getDefaultRouteByRole(user);
+
+    router.replace(redirectTo);
+
+  } catch (error) {
+
+    alert(
+      error.response?.data?.message ||
+      'Login failed'
+    );
+
+  } finally {
+    setLoading(false);
+  }
+};  
 
   const renderForm = (
     <>
