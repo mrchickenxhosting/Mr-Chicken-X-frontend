@@ -103,7 +103,21 @@ export default function ReportPage() {
       };
 
       const res = await getTripReport(filters);
-      setRows(res.rows || res || []);
+const reportRows = res.rows || res || [];
+
+console.log('TRIP REPORT RESPONSE:', reportRows);
+
+setRows(
+  reportRows.map((row) => ({
+    ...row,
+    farm_location:
+      row.farm_location ||
+      row.location ||
+      row.farmLocation ||
+      row.farm ||
+      '',
+  }))
+);
 
       setSelectedTrip(null);
       setSelectedCustomer(null);
@@ -250,7 +264,8 @@ const totalSales = isSummaryMode
 
     exportData = rows.map((row) => ({
       Date: formatDate(row.trip_date),
-      Farmer: row.farmer_name,
+      Farmer: row.farmer_name || '-',
+      Farm: row.farm_location || row.location || '-',
       Birds: row.total_birds,
       Weight: row.total_weight,
       Rate: row.purchase_rate_per_kg,
@@ -390,10 +405,10 @@ const totalSales = isSummaryMode
       loading={loading}
       value={selectedTrip}
       getOptionLabel={(o) =>
-        o
-          ? `Trip #${formatDate(o.trip_date)} • ${o.total_birds} birds`
-          : ''
-      }
+  o
+    ? `Trip #${o.id} • ${formatDate(o.trip_date)} • ${o.farmer_name || '-'} • ${o.farm_location || o.location || '-'}`
+    : ''
+}
       onChange={(e, v) => handleTripChange(v)}
       renderInput={(params) => (
         <TextField {...params} label="Select Trip" />
@@ -482,6 +497,7 @@ const totalSales = isSummaryMode
                   <TableRow>
                     <TableCell>Date</TableCell>
                     <TableCell>Farmer</TableCell>
+                    <TableCell>Farm</TableCell>
                     <TableCell>Birds</TableCell>
                     <TableCell>KG</TableCell>
                     <TableCell>Rate</TableCell>
@@ -506,7 +522,8 @@ const totalSales = isSummaryMode
                           {formatDate(row.trip_date)}
                         </TableCell>
 
-                        <TableCell>{row.farmer_name}</TableCell>
+                        <TableCell>{row.farmer_name || '-'}</TableCell>
+                        <TableCell>{row.farm_location || row.location || '-'}</TableCell>
 
                         <TableCell>{row.total_birds}</TableCell>
 
@@ -579,7 +596,7 @@ const totalSales = isSummaryMode
                       },
                     }}
                   >
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={6}>
                       TOTAL
                     </TableCell>
 

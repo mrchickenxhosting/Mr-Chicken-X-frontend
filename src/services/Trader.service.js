@@ -299,3 +299,30 @@ export const disableCar = async (carId, status) => {
 
   return response.data;
 };
+
+// ======================= Broker Master ===========================
+
+export const getallBrokers = async () => {
+  const response = await axios.get('trader/brokers');
+  return response.data;
+};
+
+export const createBroker = async (payload) => {
+  const response = await axios.post('trader/brokers', payload);
+  return response.data;
+};
+
+export const updateBroker = async (brokerId, payload) => {
+  const response = await axios.patch(
+    `trader/brokers/${brokerId}`,
+    payload
+  );
+  return response.data;
+};
+
+export const deleteBroker = async (brokerId) => {
+  const response = await axios.delete(
+    `trader/brokers/${brokerId}`
+  );
+  return response.data;
+};

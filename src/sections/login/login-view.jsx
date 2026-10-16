@@ -134,16 +134,22 @@ const handleLogin = async () => {
         </Link> */}
       </Stack>
 
-      <LoadingButton
-        fullWidth
-        size="large"
-        variant="contained"
-        color="inherit"
-        onClick={handleLogin}
-        loading={loading}
-      >
-        Login
-      </LoadingButton>
+     <LoadingButton
+  fullWidth
+  size="large"
+  variant="contained"
+  color="error"
+  onClick={handleLogin}
+  loading={loading}
+  sx={{
+    backgroundColor: '#e53935',
+    '&:hover': {
+      backgroundColor: '#c62828',
+    },
+  }}
+>
+  Login
+</LoadingButton>
 
       <Typography
   variant="caption"
@@ -155,7 +161,7 @@ const handleLogin = async () => {
     cursor: 'noneS'
   }}
 >
-  Version 1.1.1
+  Version 2.0.0
 </Typography>
     </>
   );
@@ -165,7 +171,7 @@ const handleLogin = async () => {
       sx={{
         ...bgGradient({
           color: alpha(theme.palette.background.default, 0.1),
-          imgUrl: '/assets/background/overlay_2.jpg',
+          imgUrl: '/login.svg',
         }),
         height: 1,
       }}
@@ -177,23 +183,78 @@ const handleLogin = async () => {
           left: { xs: 16, md: 24 },
         }}
       />
+  
+<Stack
+  alignItems="center"
+  justifyContent="center"
+  sx={{
+    minHeight: '100%',
+    width: '100%',
+    px: 2,
+    py: 4,
+  }}
+>
+  <Card
+    elevation={0}
+    sx={{
+      p: { xs: 3, sm: 4.5 },
+      width: '100%',
+      maxWidth: 440,
+      borderRadius: 4,
+      backgroundColor: '#ffffff',
+      border: '1px solid rgba(0, 0, 0, 0.06)',
+      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.10)',
+      transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+      '&:hover': {
+        boxShadow: '0 18px 50px rgba(0, 0, 0, 0.14)',
+      },
+    }}
+  >
+    <Stack spacing={1} sx={{ mb: 3 }}>
+      <Typography
+        variant="overline"
+        sx={{
+          color: '#e53935',
+          fontWeight: 800,
+          letterSpacing: 2,
+        }}
+      >
+        POULTRY-LINK
+      </Typography>
 
-      <Stack alignItems="center" justifyContent="center" sx={{ height: 1 }}>
-        <Card
-          sx={{
-            p: 5,
-            width: 1,
-            maxWidth: 420,
-          }}
-        >
-          <Typography variant="h4">Sign in to Poultry-Link</Typography>
+      <Typography
+        variant="h4"
+        sx={{
+          fontWeight: 800,
+          color: '#1c1c1c',
+          letterSpacing: '-0.8px',
+          fontSize: { xs: '1.7rem', sm: '2rem' },
+        }}
+      >
+        Welcome back
+      </Typography>
 
+      <Typography
+        variant="body2"
+        sx={{
+          color: 'text.secondary',
+          lineHeight: 1.7,
+        }}
+      >
+        Sign in to access your account and manage your poultry business.
+      </Typography>
+    </Stack>
 
-          <Divider sx={{ my: 3 }}/>
+    <Divider
+      sx={{
+        mb: 3,
+        borderColor: 'rgba(0, 0, 0, 0.08)',
+      }}
+    />
 
-          {renderForm}
-        </Card>
-      </Stack>
+    {renderForm}
+  </Card>
+</Stack>
     </Box>
   );
 }

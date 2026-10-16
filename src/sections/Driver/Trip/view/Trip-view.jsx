@@ -22,7 +22,7 @@ import {
 import Iconify from 'src/components/iconify';
 import Scrollbar from 'src/components/scrollbar';
 
-import UserCard from '../UserCard'; // can rename later to TripCard
+import UserCard from '../UserCard';
 import TableNoData from '../table-no-data';
 import UserTableRow from '../user-table-row';
 import EditTripDialog from '../EditTripDialog';
@@ -38,7 +38,7 @@ export default function DriverTripsPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [page, setPage] = useState(0);
-  const [order, setOrder] = useState('asc');
+  const [order, setOrder] = useState('desc');
   const [orderBy, setOrderBy] = useState('id');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -50,14 +50,25 @@ export default function DriverTripsPage() {
   // ----------------------------------------------------------------------
   // FETCH TRIPS
 
-  const fetchTrips = async () => {
-    try {
-      const data = await getallTrips();
-      setTrips(data || []);
-    } catch (error) {
-      console.error('Failed to fetch trips', error);
+const fetchTrips = async () => {
+  try {
+    const response = await getallTrips();
+
+    let tripList = [];
+
+    if (Array.isArray(response)) {
+      tripList = response;
+    } else if (Array.isArray(response?.trips)) {
+      tripList = response.trips;
+    } else if (Array.isArray(response?.data)) {
+      tripList = response.data;
     }
-  };
+
+    setTrips(tripList);
+  } catch (error) {
+    console.error('Failed to fetch trips:', error);
+  }
+};
 
   useEffect(() => {
     fetchTrips();
@@ -68,6 +79,7 @@ export default function DriverTripsPage() {
 
   const handleSort = (event, id) => {
     const isAsc = orderBy === id && order === 'asc';
+
     if (id !== '') {
       setOrder(isAsc ? 'desc' : 'asc');
       setOrderBy(id);
@@ -88,40 +100,48 @@ export default function DriverTripsPage() {
     setFilterName(event.target.value);
   };
 
-const dataFiltered = trips
-  .filter((trip) =>
-    [
-      trip.id,
-      trip.farmer_name,
-      trip.driver_name,
-      trip.lifter_name,
-      trip.contact_name,
-      trip.farmer_mobile,
-      trip.driver_mobile,
-      trip.contact_phone,
-      trip.status,
-      trip.farm_location,
-      trip.total_birds,
-    ]
-      .join(' ')
-      .toLowerCase()
-      .includes(filterName.toLowerCase())
-  )
-  .sort(getComparator(order, orderBy));
+  // ----------------------------------------------------------------------
+  // FILTER AND SORT
+  // Includes broker name and number in the search.
 
-  const notFound = !dataFiltered.length && !!filterName;
+  const dataFiltered = trips
+    .filter((trip) =>
+      [
+        trip.id,
+        trip.farmer_name,
+        trip.driver_name,
+        trip.lifter_name,
+        trip.broker_name,
+        trip.broker_number,
+        trip.contact_name,
+        trip.farmer_mobile,
+        trip.driver_mobile,
+        trip.contact_phone,
+        trip.status,
+        trip.farm_location,
+        trip.total_birds,
+        trip.approx_rate,
+      ]
+        .map((value) => value ?? '')
+        .join(' ')
+        .toLowerCase()
+        .includes(filterName.trim().toLowerCase())
+    )
+    .sort(getComparator(order, orderBy));
+
+  const notFound = !dataFiltered.length && Boolean(filterName);
 
   // ----------------------------------------------------------------------
-  // SAVE TRIP (CREATE / UPDATE)
+  // WHATSAPP MESSAGE
 
-const generateTripWhatsAppMessage = (trip) => `
+  const generateTripWhatsAppMessage = (trip) => `
 🚚 *ટ્રિપ સોંપવામાં આવી છે*
 
 📅 તારીખ: ${
-  trip.trip_date
-    ? new Date(trip.trip_date).toLocaleDateString('en-IN')
-    : '-'
-}
+    trip.trip_date
+      ? new Date(trip.trip_date).toLocaleDateString('en-IN')
+      : '-'
+  }
 ⏰ સમય: ${trip.trip_time || '-'}
 
 📍 સ્થળ: ${trip.farm_location || '-'}
@@ -135,14 +155,15 @@ const generateTripWhatsAppMessage = (trip) => `
 🧍 લિફ્ટર: ${trip.lifter_name || '-'}
 📞 લિફ્ટર સંપર્ક: ${trip.lifter_mobile || '-'}
 
+${trip.broker_name ? `🤝 બ્રોકર: ${trip.broker_name}\n` : ''}
 ${
   trip.contact_name
     ? `👤 સંપર્ક વ્યક્તિ: ${trip.contact_name}
-📞 સંપર્ક નંબર: ${trip.contact_phone}`
+📞 સંપર્ક નંબર: ${trip.contact_phone || '-'}`
     : ''
 }
 
-🐔 કુલ પક્ષીઓ: ${trip.total_birds}
+🐔 કુલ પક્ષીઓ: ${trip.total_birds ?? '-'}
 
 કૃપા કરીને સમયસર પહોંચો અને લોડિંગ પછી સ્ટેટસ અપડેટ કરો.
 
@@ -152,10 +173,10 @@ ${
 🚚 *New Trip Assigned*
 
 📅 Date: ${
-  trip.trip_date
-    ? new Date(trip.trip_date).toLocaleDateString('en-IN')
-    : '-'
-}
+    trip.trip_date
+      ? new Date(trip.trip_date).toLocaleDateString('en-IN')
+      : '-'
+  }
 ⏰ Time: ${trip.trip_time || '-'}
 
 📍 Location: ${trip.farm_location || '-'}
@@ -169,20 +190,20 @@ ${
 🧍 Lifter: ${trip.lifter_name || '-'}
 📞 Lifter Contact: ${trip.lifter_mobile || '-'}
 
+${trip.broker_name ? `🤝 Broker: ${trip.broker_name}\n` : ''}
 ${
   trip.contact_name
     ? `👤 Contact Person: ${trip.contact_name}
-📞 Contact No: ${trip.contact_phone}`
+📞 Contact No: ${trip.contact_phone || '-'}`
     : ''
 }
 
-🐔 Total Birds: ${trip.total_birds}
+🐔 Total Birds: ${trip.total_birds ?? '-'}
 
 Please reach on time and update status after loading.
 
 — Dispatch Team
 `;
-
 
   const sendTripWhatsApp = (trip) => {
     if (!trip?.driver_mobile) {
@@ -190,60 +211,89 @@ Please reach on time and update status after loading.
       return;
     }
 
-    const phone = `91${trip.driver_mobile}`;
+    const phone = `91${String(trip.driver_mobile).replace(/\D/g, '')}`;
     const message = generateTripWhatsAppMessage(trip);
-
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  // ----------------------------------------------------------------------
+  // SAVE TRIP (CREATE / UPDATE)
 
- const handleSaveTrip = async (payload) => {
-  try {
-    let res;
-    if (!selectedTrip) {
-      res = await CreateTrip(payload);
-    } else {
-      res = await updateTrip(selectedTrip.id, payload);
+  const handleSaveTrip = async (payload) => {
+    try {
+      let response;
+
+      if (!selectedTrip) {
+        response = await CreateTrip(payload);
+      } else {
+        response = await updateTrip(selectedTrip.id, payload);
+      }
+
+      const savedTrip = response?.trip || response?.data?.trip || response?.data || response;
+
+      // Close the dialog and reset selection.
+      setOpenDialog(false);
+      setSelectedTrip(null);
+
+      // Refresh trips so the broker name and other joined fields are up to date.
+      await fetchTrips();
+
+      // Preserve the existing WhatsApp behavior.
+      if (savedTrip?.driver_mobile) {
+        sendTripWhatsApp(savedTrip);
+      } else {
+        console.warn(
+          'Driver mobile not found in the save response; WhatsApp not sent.'
+        );
+      }
+    } catch (error) {
+      console.error('Trip save failed:', error);
+
+      alert(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Failed to save trip'
+      );
     }
+  };
 
-    const savedTrip = res?.trip;
-
-    // ✅ Close dialog FIRST (always)
-    setOpenDialog(false);
-    setSelectedTrip(null);
-
-    // ✅ Refresh trips
-    await fetchTrips();
-
-    // ✅ Send WhatsApp (non-blocking)
-    if (savedTrip?.driver_mobile) {
-      sendTripWhatsApp(savedTrip);
-    } else {
-      console.warn('Driver mobile not found, WhatsApp not sent');
-    }
-
-  } catch (error) {
-    console.error('Trip save failed', error);
-    alert(error?.response?.data?.message || 'Failed to save trip');
-  }
-};
+  // ----------------------------------------------------------------------
+  // DELETE TRIP
 
   const handleDeleteTrip = async (tripId) => {
-    if (!window.confirm('Are you sure you want to delete this trip?')) return;
+    if (!window.confirm('Are you sure you want to delete this trip?')) {
+      return;
+    }
 
     try {
       await deleteTrip(tripId);
-      fetchTrips();
+      await fetchTrips();
+      setPage(0);
+
       alert('Trip deleted successfully');
     } catch (error) {
-      console.error(error);
-      alert(error?.response?.data?.message || 'Failed to delete trip');
+      console.error('Trip delete failed:', error);
+
+      alert(
+        error?.response?.data?.message ||
+          error?.message ||
+          'Failed to delete trip'
+      );
     }
   };
 
+  // ----------------------------------------------------------------------
+  // OPEN CREATE DIALOG
+
+  const handleCreateTrip = () => {
+    setSelectedTrip(null);
+    setOpenDialog(true);
+  };
 
   // ----------------------------------------------------------------------
+  // RENDER
 
   return (
     <Container maxWidth="xxl">
@@ -260,10 +310,7 @@ Please reach on time and update status after loading.
             variant="contained"
             color="inherit"
             startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setSelectedTrip(null);
-              setOpenDialog(true);
-            }}
+            onClick={handleCreateTrip}
           >
             New Trip
           </Button>
@@ -272,28 +319,29 @@ Please reach on time and update status after loading.
 
       <Card>
         <UserTableToolbar
-         numSelected={0}
+          numSelected={0}
           filterName={filterName}
           onFilterName={handleFilterByName}
         />
 
-        {/* ================= DESKTOP TABLE ================= */}
+        {/* DESKTOP TABLE */}
         {!isMobile ? (
           <Scrollbar>
             <TableContainer sx={{ overflow: 'unset' }}>
-              <Table sx={{ minWidth: 900 }}>
+              <Table sx={{ minWidth: 1100 }}>
                 <UserTableHead
                   order={order}
                   orderBy={orderBy}
                   onRequestSort={handleSort}
                   headLabel={[
                     { id: 'id', label: 'Trip ID' },
-                    { id: 'trip_time', label: 'Date' },
+                    { id: 'trip_date', label: 'Date' },
                     { id: 'trip_time', label: 'Time' },
                     { id: 'farmer_name', label: 'Farmer/Driver' },
                     { id: 'driver_name', label: 'Driver' },
                     { id: 'lifter_name', label: 'Lifter' },
-                    { id: 'contact_person', label: 'Contact Person' },
+                    { id: 'broker_name', label: 'Broker' },
+                    { id: 'contact_name', label: 'Contact Person' },
                     { id: 'total_birds', label: 'Birds' },
                     { id: 'approx_rate', label: 'Approx. Rate' },
                     { id: 'status', label: 'Status' },
@@ -325,7 +373,7 @@ Please reach on time and update status after loading.
                     emptyRows={emptyRows(
                       page,
                       rowsPerPage,
-                      trips.length
+                      dataFiltered.length
                     )}
                   />
 
@@ -335,19 +383,24 @@ Please reach on time and update status after loading.
             </TableContainer>
           </Scrollbar>
         ) : (
-          /* ================= MOBILE CARDS ================= */
+          /* MOBILE CARDS */
           <Stack spacing={2} sx={{ p: 2 }}>
-            {dataFiltered.map((row) => (
-              <UserCard
-                row={row}
-                onEdit={(trip) => {
-                  setSelectedTrip(trip);
-                  setOpenDialog(true);
-                }}
-                onDeleteTrip={(tripId) => handleDeleteTrip(tripId)}
-              />
-
-            ))}
+            {dataFiltered
+              .slice(
+                page * rowsPerPage,
+                page * rowsPerPage + rowsPerPage
+              )
+              .map((row) => (
+                <UserCard
+                  key={row.id}
+                  row={row}
+                  onEdit={(trip) => {
+                    setSelectedTrip(trip);
+                    setOpenDialog(true);
+                  }}
+                  onDeleteTrip={handleDeleteTrip}
+                />
+              ))}
 
             {!dataFiltered.length && <TableNoData query={filterName} />}
           </Stack>
@@ -356,7 +409,7 @@ Please reach on time and update status after loading.
         <TablePagination
           page={page}
           component="div"
-          count={trips.length}
+          count={dataFiltered.length}
           rowsPerPage={rowsPerPage}
           onPageChange={handleChangePage}
           rowsPerPageOptions={[5, 10, 25]}
@@ -364,18 +417,23 @@ Please reach on time and update status after loading.
         />
       </Card>
 
-      {/* MOBILE FAB */}
+      {/* MOBILE CREATE BUTTON */}
       {isMobile && (
-        <Box sx={{ position: 'fixed', bottom: 16, left: 16, right: 16 }}>
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            left: 16,
+            right: 16,
+            zIndex: 10,
+          }}
+        >
           <Button
             fullWidth
             variant="contained"
             color="inherit"
             startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setSelectedTrip(null);
-              setOpenDialog(true);
-            }}
+            onClick={handleCreateTrip}
           >
             New Trip
           </Button>
@@ -386,7 +444,10 @@ Please reach on time and update status after loading.
       <EditTripDialog
         open={openDialog}
         trip={selectedTrip}
-        onClose={() => setOpenDialog(false)}
+        onClose={() => {
+          setOpenDialog(false);
+          setSelectedTrip(null);
+        }}
         onSave={handleSaveTrip}
       />
     </Container>

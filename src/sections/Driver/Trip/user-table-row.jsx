@@ -263,6 +263,21 @@ Please reach on time and update status after loading.
           </Stack>
         </TableCell>
 
+        {/* BROKER */}
+<TableCell>
+  <Stack spacing={0.3}>
+    <Typography variant="subtitle2">
+      {row.broker_name || '-'}
+    </Typography>
+
+    {row.broker_number && (
+      <Typography variant="caption" color="text.secondary">
+        📞 {row.broker_number}
+      </Typography>
+    )}
+  </Stack>
+</TableCell>
+
         <TableCell>
           {row.contact_name ? (
             <Stack spacing={0.3}>

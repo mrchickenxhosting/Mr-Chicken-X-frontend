@@ -30,6 +30,7 @@ const navConfig = [
       { title: 'Lifter', path: '/user/lifter', roles: ['TRADER', 'MANAGER'] },
       { title: 'Customers', path: '/user/customers', roles: ['TRADER', 'MANAGER'] },
       { title: 'Farmers', path: '/user/farmers', roles: ['TRADER', 'MANAGER'] },
+      { title: 'Broker', path: '/user/broker', roles: ['TRADER', 'MANAGER'] },
     ],
   },
 
