@@ -1,11 +1,15 @@
+
 import { getUser } from 'src/utils/session';
-   
+
 import SvgColor from 'src/components/svg-color';
 
 // ----------------------------------------------------------------------
 
 const icon = (name) => (
-  <SvgColor src={`/assets/icons/navbar/${name}.svg`} sx={{ width: 1, height: 1 }} />
+  <SvgColor
+    src={`/assets/icons/navbar/${name}.svg`}
+    sx={{ width: 1, height: 1 }}
+  />
 );
 
 // ----------------------------------------------------------------------
@@ -26,11 +30,27 @@ const navConfig = [
     children: [
       { title: 'Managers', path: '/user/managers', roles: ['TRADER'] },
       { title: 'Cars', path: '/user/cars', roles: ['TRADER', 'MANAGER'] },
-      { title: 'Delivery Patner', path: '/user/drivers', roles: ['TRADER', 'MANAGER'] },
+      {
+        title: 'Delivery Patner',
+        path: '/user/drivers',
+        roles: ['TRADER', 'MANAGER'],
+      },
       { title: 'Lifter', path: '/user/lifter', roles: ['TRADER', 'MANAGER'] },
-      { title: 'Customers', path: '/user/customers', roles: ['TRADER', 'MANAGER'] },
-      { title: 'Farmers', path: '/user/farmers', roles: ['TRADER', 'MANAGER'] },
-      { title: 'Broker', path: '/user/broker', roles: ['TRADER', 'MANAGER'] },
+      {
+        title: 'Customers',
+        path: '/user/customers',
+        roles: ['TRADER', 'MANAGER'],
+      },
+      {
+        title: 'Farmers',
+        path: '/user/farmers',
+        roles: ['TRADER', 'MANAGER'],
+      },
+      {
+        title: 'Broker',
+        path: '/user/broker',
+        roles: ['TRADER', 'MANAGER'],
+      },
     ],
   },
 
@@ -55,7 +75,7 @@ const navConfig = [
     title: 'Reports',
     path: '/reports',
     icon: icon('ic_report'),
-    roles: ['TRADER','MANAGER'],
+    roles: ['TRADER', 'MANAGER'],
   },
 
   // ===== ADMIN =====
@@ -69,18 +89,20 @@ const navConfig = [
     ],
   },
 
-  // ===== DRIVER =====
-  // {
-  //   title: 'Trips',
-  //   path: '/trips',
-  //   icon: icon('ic_trip'),
-  //   roles: ['DRIVER'],
-  // },
+  // ===== BROKER =====
+  {
+    title: 'Trips',
+    path: '/brokertrip',
+    icon: icon('ic_trip'),
+    roles: ['BROKER'],
+  },
+
+  // ===== DRIVER & LIFTER =====
   {
     title: 'Lifting',
     path: '/lifting',
     icon: icon('ic_loading'),
-    roles: ['DRIVER','LIFTER'],
+    roles: ['DRIVER', 'LIFTER'],
   },
   {
     title: 'Sales',
@@ -91,13 +113,13 @@ const navConfig = [
 ];
 
 // ----------------------------------------------------------------------
-// 🔥 ROLE FILTER LOGIC (FINAL)
+// ROLE FILTER LOGIC
 // ----------------------------------------------------------------------
 
 const filterNavByRole = (items, user) => {
   if (!user) return [];
 
-  /* ================= SUPERADMIN ================= */
+  // SUPERADMIN
   if (user.role === 'SUPERADMIN') {
     const adminItem = items.find((item) => item.title === 'Admin');
 
@@ -106,14 +128,14 @@ const filterNavByRole = (items, user) => {
     return [
       {
         ...adminItem,
-        children: adminItem.children.filter((child) =>
+        children: (adminItem.children || []).filter((child) =>
           ['/admin/dashboard', '/admin/traders'].includes(child.path)
         ),
       },
     ];
   }
 
-  /* ================= PLATFORM ADMIN ================= */
+  // PLATFORM ADMIN
   if (user.isPlatformAdmin) {
     return items
       .filter(
@@ -136,7 +158,7 @@ const filterNavByRole = (items, user) => {
       .filter((item) => !item.children || item.children.length > 0);
   }
 
-  /* ================= NORMAL USER ================= */
+  // NORMAL USER
   const { role } = user;
 
   return items

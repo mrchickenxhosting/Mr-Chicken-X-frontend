@@ -1,7 +1,8 @@
+
 export const getDefaultRouteByRole = (user) => {
   if (!user) return '/login';
 
-  // 🔥 SUPERADMIN has highest priority
+  // SUPERADMIN has highest priority
   if (user.role === 'SUPERADMIN') {
     return '/admin/traders';
   }
@@ -15,10 +16,14 @@ export const getDefaultRouteByRole = (user) => {
     case 'TRADER':
     case 'MANAGER':
       return '/';
+
     case 'DRIVER':
+    case 'LIFTER':
       return '/lifting';
-         case 'LIFTER':
-      return '/lifting';
+
+    case 'BROKER':
+      return '/brokertrip';
+
     default:
       return '/login';
   }

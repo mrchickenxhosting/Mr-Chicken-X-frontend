@@ -2,21 +2,34 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { useState, useEffect } from 'react';
 
 import {
+
   Chip,
+
   Card,
+
   Grid,
+  
   Stack,
+  
+  Alert,
   Button,
+
   Dialog,
+
   MenuItem,
+
   TextField,
+
   Typography,
+
   DialogTitle,
+
   Autocomplete,
+
   DialogContent,
 } from '@mui/material';
 
-import { getallDriver ,getallCustomer } from 'src/services/Trader.service';
+import { getallDriver, getallCustomer } from 'src/services/Trader.service';
 import {
   getTripCages,
   sellToCustomer,
@@ -26,119 +39,230 @@ import {
 const PAYMENT_MODES = ['NONE', 'CASH', 'UPI', 'BOTH'];
 
 const SELL_TYPES = [
+
   { value: 'FULL', label: 'Full Cage(s)' },
+
   { value: 'CUSTOM', label: 'Custom Birds' },
+
 ];
+
+
+const CUSTOMER_TYPES = {
+  RED: {
+    color: '#B71C1C',
+    background: '#FDECEA',
+    label: 'RED — Pay in full',
+    description: 'Collect the full amount before completing this sale.',
+  },
+  ORANGE: {
+    color: '#E65100',
+    background: '#FFF3E0',
+    label: 'ORANGE — Limited credit',
+    description: 'Keep the outstanding balance within the credit limit.',
+  },
+  GREEN: {
+    color: '#1B5E20',
+    background: '#E8F5E9',
+    label: 'GREEN — Flexible credit',
+    description: 'Sale is allowed; check any credit warning after saving.',
+  },
+};
+
+const getCustomerType = (customer) => {
+  const type = String(customer?.customer_type || 'GREEN').toUpperCase();
+  return CUSTOMER_TYPES[type] ? type : 'GREEN';
+};
+
+const getCustomerAlertSeverity = (customer) => {
+  const customerType = getCustomerType(customer);
+
+  if (customerType === 'RED') {
+    return 'error';
+  }
+
+  if (customerType === 'ORANGE') {
+    return 'warning';
+  }
+
+  return 'success';
+};
+
+const formatRupees = (amount) =>
+  `₹${Number(amount || 0).toLocaleString('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
+
 
 export default function DriverSalesPage() {
 
   // ================= TRIP =================
+
   const [trips, setTrips] = useState([]);
+
   const [trip, setTrip] = useState(null);
+
   const [tripLocked, setTripLocked] = useState(false);
 
   // ================= CUSTOMER =================
+
   const [customers, setCustomers] = useState([]);
+
   const [customer, setCustomer] = useState(null);
+
   const [drivers, setDrivers] = useState([]);
 
   // ================= CAGES =================
+
   const [cages, setCages] = useState([]);
+
   const [selectedCages, setSelectedCages] = useState([]);
+
   const [sellType, setSellType] = useState('FULL');
 
   // ================= SALE =================
+
   const [count, setCount] = useState('');
+
   const [weight, setWeight] = useState('');
+
   const [rate, setRate] = useState('');
+
   const [calcBy, setCalcBy] = useState('WEIGHT');
 
   // ================= PAYMENT =================
+
   const [paymentMode, setPaymentMode] = useState('NONE');
+
   const [payment, setPayment] = useState({ cash: '', upi: '' });
 
   const [mode, setMode] = useState(null); // 'SALE' | 'PAYMENT'
+
   const [openModeDialog, setOpenModeDialog] = useState(false);
+  const [creditWarning, setCreditWarning] = useState('');
 
   // ----------------------------------------------------------------------
+
   // LOAD BASE DATA
 
   useEffect(() => {
+
     getassignedTrips().then((res) => setTrips(res || []));
+
     getallCustomer().then((res) => setCustomers(res || []));
+
     getallDriver().then((res) => setDrivers(res || []));
+
   }, []);
 
   // ----------------------------------------------------------------------
+
   // LOAD CAGES AFTER TRIP SELECT
 
   useEffect(() => {
+
     if (!trip) return;
 
     const fetchCages = async () => {
+
       const res = await getTripCages(trip.id);
 
       const cageArray = Object.entries(res || {}).map(
+
         ([cageNumber, cage]) => {
 
           let totalRemainingBirds = 0;
+
           let totalRemainingWeight = 0;
 
           let totalOriginalBirds = 0;
+
           let totalOriginalWeight = 0;
 
           Object.keys(cage || {}).forEach((color) => {
+
             cage[color]?.forEach((entry) => {
+
               totalRemainingBirds += Number(entry.chickens || 0);
+
               totalRemainingWeight += Number(entry.weight || 0);
 
               totalOriginalBirds += Number(entry.original_chickens || 0);
+
               totalOriginalWeight += Number(entry.original_weight || 0);
+
             });
+
           });
 
           return {
+
             cage_number: Number(cageNumber),
+
             remaining_birds: totalRemainingBirds,
+
             remaining_weight: totalRemainingWeight,
+
             original_birds: totalOriginalBirds,
+
             original_weight: totalOriginalWeight,
+
             isSoldOut: totalRemainingBirds <= 0
+
           };
+
         }
+
       );
+
       setCages(cageArray);
 
     };
 
     fetchCages();
+
   }, [trip]);
 
   // ----------------------------------------------------------------------
+
   // AUTO CALCULATE WHEN MULTI CAGE SELECTED
 
   useEffect(() => {
+
     if (!selectedCages.length) return;
 
     if (sellType === 'FULL') {
+
       const totalBirds = selectedCages.reduce(
+
         (sum, c) => sum + Number(c.remaining_birds || 0),
+
         0
+
       );
 
       const totalWeight = selectedCages.reduce(
+
         (sum, c) => sum + Number(c.remaining_weight || 0),
+
         0
+
       );
 
       setCount(totalBirds);
+
       setWeight(Number(totalWeight.toFixed(2)));
+
       setCalcBy('WEIGHT');
+
     }
 
     if (sellType === 'CUSTOM') {
+
       setCount('');
+
       setWeight('');
+
     }
 
   }, [sellType, selectedCages]);
@@ -146,807 +270,1447 @@ export default function DriverSalesPage() {
   // ----------------------------------------------------------------------
 
   const totalAmount =
+
     calcBy === 'WEIGHT'
+
       ? Number((Number(rate || 0) * Number(weight || 0)).toFixed(2))
+
       : Number((Number(rate || 0) * Number(count || 0)).toFixed(2));
 
-
   // ----------------------------------------------------------------------
+
   // SAVE SALE
 
   // const handleSaveSale = async () => {
+
   //   try {
 
   //     const payload = {
+
   //       tripId: trip.id,
+
   //       customer_id: customer.id,
+
   //       cage_numbers: selectedCages.map(c => c.cage_number),
+
   //       sell_type: sellType,
+
   //       bird_count: sellType === 'CUSTOM' ? Number(count) : null,
+
   //       weight: sellType === 'CUSTOM' ? Number(weight) : null,
+
   //       rate: Number(rate),
+
   //       total_amount: totalAmount,
+
   //       payment_mode: paymentMode,
+
   //       cash_amount:
+
   //         paymentMode === 'CASH' || paymentMode === 'BOTH'
+
   //           ? Number(payment.cash || 0)
+
   //           : 0,
+
   //       upi_amount:
+
   //         paymentMode === 'UPI' || paymentMode === 'BOTH'
+
   //           ? Number(payment.upi || 0)
+
   //           : 0,
+
   //     };
 
   //     console.log(payload)
+
   //     await sellToCustomer(payload);
 
   //     alert('Sale saved successfully');
 
   //     // refresh cages
+
   //     const res = await getTripCages(trip.id);
 
   //     const cageArray = Object.entries(res || {}).map(
+
   //       ([cageNumber, cage]) => {
 
   //         let totalBirds = 0;
+
   //         let totalWeight = 0;
 
   //         Object.keys(cage || {}).forEach((color) => {
+
   //           cage[color]?.forEach((entry) => {
+
   //             totalBirds += Number(entry.chickens || 0);
+
   //             totalWeight += Number(entry.weight || 0);
+
   //           });
+
   //         });
 
   //         return {
+
   //           cage_number: Number(cageNumber),
+
   //           remaining_birds: totalBirds,
+
   //           remaining_weight: totalWeight,
+
   //         };
+
   //       }
+
   //     );
 
   //     setCages(cageArray);
 
   //     // reset
+
   //     setCustomer(null);
+
   //     setSelectedCages([]);
+
   //     setSellType('FULL');
+
   //     setCount('');
+
   //     setWeight('');
+
   //     setRate('');
+
   //     setCalcBy('WEIGHT');
+
   //     setPaymentMode('NONE');
+
   //     setPayment({ cash: '', upi: '' });
 
   //   } catch (err) {
+
   //     console.error(err);
+
   //     alert(err?.response?.data?.message || 'Failed to save sale');
+
   //   }
+
   // };
 
   const handleSaveSale = async () => {
+
     try {
 
       // -------------------------------
+
       // PREPARE VALUES (NO TERNARY HELL)
+
       // -------------------------------
 
       let cageNumbers = [];
+
       let birdCount = 0;
+
       let finalWeight = 0;
+
       let finalRate = 0;
+
       let finalTotal = 0;
+
       let finalSellType = null;
 
       if (mode === 'SALE') {
+
         cageNumbers = selectedCages.map(c => c.cage_number);
+
         finalSellType = sellType;
 
         if (sellType === 'CUSTOM') {
+
           birdCount = Number(count);
+
           finalWeight = Number(weight);
+
         } else {
+
           birdCount = null;
+
           finalWeight = null;
+
         }
 
         finalRate = Number(rate);
+
         finalTotal = totalAmount;
+
       } else {
+
         // PAYMENT MODE
+
         cageNumbers = []; // dummy cage number for payment-only entries
+
         birdCount = 0;
+
         finalWeight = 0;
+
         finalRate = 0;
+
         finalTotal = Number(payment.cash || 0) + Number(payment.upi || 0);
+
         finalSellType = null;
+
       }
 
       // -------------------------------
+
       // BUILD PAYLOAD
+
       // -------------------------------
 
       const payload = {
+
         tripId: trip.id,
+
         customer_id:
+
           customer.entityType === 'CUSTOMER'
+
             ? customer.id
+
             : null,
 
         target_driver_id:
+
           customer.entityType === 'DRIVER'
+
             ? customer.id
+
             : null,
 
         sale_target_type: customer.entityType,
 
         cage_numbers: cageNumbers,
+
         sell_type: finalSellType,
 
         bird_count: birdCount,
+
         weight: finalWeight,
+
         rate: finalRate,
+
         total_amount: finalTotal,
 
         payment_mode: paymentMode,
 
         cash_amount:
+
           paymentMode === 'CASH' || paymentMode === 'BOTH'
+
             ? Number(payment.cash || 0)
+
             : 0,
 
         upi_amount:
+
           paymentMode === 'UPI' || paymentMode === 'BOTH'
+
             ? Number(payment.upi || 0)
+
             : 0,
+
       };
 
-      console.log(payload); 
+      console.log(payload);
 
-      await sellToCustomer(payload);
+      const response = await sellToCustomer(payload);
+      const responseData = response?.data ?? response;
+      const returnedCreditWarning = responseData?.credit_warning;
+
+      if (mode === 'SALE' && returnedCreditWarning) {
+        setCreditWarning(returnedCreditWarning);
+      } else {
+        setCreditWarning('');
+      }
 
       alert(mode === 'SALE' ? 'Sale saved successfully' : 'Payment saved successfully');
 
       // -------------------------------
+
       // REFRESH CAGES
+
       // -------------------------------
 
       const res = await getTripCages(trip.id);
 
       const cageArray = Object.entries(res || {}).map(
+
         ([cageNumber, cage]) => {
+
           let totalBirds = 0;
+
           let totalWeight = 0;
 
           Object.keys(cage || {}).forEach((color) => {
+
             cage[color]?.forEach((entry) => {
+
               totalBirds += Number(entry.chickens || 0);
+
               totalWeight += Number(entry.weight || 0);
+
             });
+
           });
 
           return {
+
             cage_number: Number(cageNumber),
+
             remaining_birds: totalBirds,
+
             remaining_weight: totalWeight,
+
           };
+
         }
+
       );
 
       setCages(cageArray);
 
       // -------------------------------
+
       // RESET EVERYTHING
+
       // -------------------------------
 
       setCustomer(null);
+
       setSelectedCages([]);
+
       setSellType('FULL');
+
       setCount('');
+
       setWeight('');
+
       setRate('');
+
       setCalcBy('WEIGHT');
+
       setPaymentMode('NONE');
+
       setPayment({ cash: '', upi: '' });
+
       setMode(null); // 🔥 IMPORTANT
 
     } catch (err) {
+
       console.error(err);
+
       alert(err?.response?.data?.message || 'Failed to save');
+
     }
+
   };
 
   // ----------------------------------------------------------------------
+
   // UPI QR
 
   const generateUpiQrValue = () => {
+
     if (!trip || !payment.upi || !trip.trader_upi_id) return '';
 
     const amount = Number(payment.upi).toFixed(2);
 
     return `upi://pay?pa=${trip.trader_upi_id}&pn=${encodeURIComponent(
+
       trip.company_name || 'Trader'
+
     )}&am=${amount}&cu=INR`;
+
   };
 
   // ----------------------------------------------------------------------
 
   const allCagesSold =
+
     cages.length > 0 &&
+
     cages.every((c) => Number(c.remaining_birds) <= 0);
 
   const getCageBgColor = (isSelected, isDisabled) => {
+
     if (isSelected) return 'primary.light';
+
     if (isDisabled) return 'grey.200';
+
     return 'background.paper';
+
   };
 
   const customerOptions = [
+
     ...customers.map((c) => ({
+
       ...c,
+
       entityType: 'CUSTOMER',
+
     })),
+
     ...drivers.map((d) => ({
+
       ...d,
+
       entityType: 'DRIVER',
+
     })),
+
   ];
 
   return (
+
     <Stack spacing={3}>
+
       <Typography variant="h5">Sales Entry</Typography>
+
       <Card sx={{ p: 2 }}>
+
         <Autocomplete
+
           options={trips}
+
           value={trip}
+
           disabled={tripLocked}
+
           onChange={(e, v) => {
+
             setTrip(v);
+
             setTripLocked(true);
+
           }}
-  getOptionLabel={(o) => {
-    if (!o) return '';
 
-    const sourceName =
-      o.source_type === 'driver'
-        ? `🚛 ${o.source_driver_name || '-'}`
-        : `👨‍🌾 ${o.farmer_name || '-'}`;
+          getOptionLabel={(o) => {
 
-    return `Trip #${o.id} • ${o.total_birds} birds • ${sourceName}`;
-  }}  
+            if (!o) return '';
+
+            const sourceName =
+
+              o.source_type === 'driver'
+
+                ? `🚛 ${o.source_driver_name || '-'}`
+
+                : `👨‍🌾 ${o.farmer_name || '-'}`;
+
+            return `Trip #${o.id} • ${o.total_birds} birds • ${sourceName}`;
+
+          }}
+
           renderInput={(p) => <TextField {...p} label="Select Trip" />}
+
         />
 
         {tripLocked && (
+
           <Typography
+
             variant="body2"
+
             color="error"
+
             sx={{
+
               mt: 1,
+
               cursor: 'pointer',
+
               width: 'fit-content',
+
             }}
+
             onClick={() => {
+
               setTrip(null);
+
               setTripLocked(false);
+
               setCustomer(null);
+
               setSelectedCages([]);
+
             }}
+
           >
+
             Change Trip
+
           </Typography>
+
         )}
+
       </Card>
 
       {/* CUSTOMER */}
 
       {allCagesSold && (
+
         <Typography
+
           variant="subtitle1"
+
           sx={{
+
             color: 'error.main',
+
             fontWeight: 600,
+
             textAlign: 'center',
+
             py: 2,
+
           }}
+
         >
+
           All cages are sold. Please meet Manager now.
+
         </Typography>
+
       )}
+
       {trip && !allCagesSold && (
+
         <Card sx={{ p: 2 }}>
+
           <Autocomplete
+
             options={customerOptions}
+
             value={customer}
+
             // onChange={(e, v) => setCustomer(v)}
+
             onChange={(e, v) => {
+
               setCustomer(v);
 
               if (v) {
+
                 setMode(null);              // reset mode
+
                 setSelectedCages([]);       // reset cages
+
                 setOpenModeDialog(true);    // 🔥 open dialog here
+
               }
+
             }}
-            getOptionLabel={(o) =>
-              o
-                ? `${o.entityType === 'DRIVER' ? '🚛 ' : ''}${o.name} • ₹ ${Math.round(
-                  Number(o.outstanding || 0)
-                ).toLocaleString()}`
-                : ''
-            }
-            renderOption={(props, option) => (
-              <li {...props}>
-                <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
 
-                  {/* Left Side */}
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{option.name} • {option.mobile} • {option.city}</div>
-                  </div>
+            getOptionLabel={(option) => {
+              if (!option) return '';
 
-                  {option.entityType === 'DRIVER' && (
-                    <Chip
-                      label="Driver"
-                      size="small"
-                      color="warning"
-                    />
-                  )}
+              const outstanding = formatRupees(option.outstanding);
+              const name = option.name || 'Unnamed';
 
-                  {/* Outstanding Red Box */}
-                  {Number(option.outstanding) > 0 && (
-                    <div
-                      style={{
-                        backgroundColor: '#ffe5e5',
-                        color: '#d32f2f',
-                        padding: '4px 10px',
-                        borderRadius: 20,
-                        fontSize: 13,
-                        fontWeight: 600,
-                      }}
+              return option.entityType === 'DRIVER'
+                ? `Driver: ${name} • Outstanding: ${outstanding}`
+                : `${name} • Outstanding: ${outstanding}`;
+            }}
+            renderOption={(props, option) => {
+              const isDriver = option.entityType === 'DRIVER';
+              const type = getCustomerType(option);
+              const typeInfo = CUSTOMER_TYPES[type];
+
+              return (
+                <li {...props} key={`${option.entityType}-${option.id}`}>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1}
+                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                    justifyContent="space-between"
+                    sx={{ width: '100%', py: 0.75 }}
+                  >
+                    <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography fontWeight={700}>
+                        {isDriver ? '🚛 Driver: ' : '👤 '}
+                        {option.name || 'Name unavailable'}
+                      </Typography>
+
+                      <Typography variant="body2" color="text.secondary">
+                        {option.mobile || 'No phone number'}
+                        {option.city ? ` • ${option.city}` : ''}
+                      </Typography>
+
+                      {isDriver ? (
+                        <Chip
+                          label="DRIVER"
+                          size="small"
+                          sx={{
+                            alignSelf: 'flex-start',
+                            fontWeight: 700,
+                            color: '#5D4037',
+                            backgroundColor: '#EFEBE9',
+                          }}
+                        />
+                      ) : (
+                        <>
+                          <Chip
+                            label={typeInfo.label}
+                            size="small"
+                            sx={{
+                              alignSelf: 'flex-start',
+                              color: typeInfo.color,
+                              backgroundColor: typeInfo.background,
+                              fontWeight: 700,
+                              maxWidth: '100%',
+                            }}
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            {typeInfo.description}
+                          </Typography>
+                        </>
+                      )}
+                    </Stack>
+
+                    <Stack
+                      spacing={0.25}
+                      alignItems={{ xs: 'flex-start', sm: 'flex-end' }}
+                      sx={{ flexShrink: 0 }}
                     >
-                      ₹ {Math.round(Number(option.outstanding)).toLocaleString()}
-                    </div>
-                  )}
-                </div>
-              </li>
-            )}
+                      <Typography variant="caption" color="text.secondary">
+                        Previous outstanding
+                      </Typography>
+                      <Typography
+                        fontWeight={700}
+                        color={
+                          Number(option.outstanding || 0) > 0
+                            ? 'error.main'
+                            : 'success.main'
+                        }
+                      >
+                        {formatRupees(option.outstanding)}
+                      </Typography>
+                    </Stack>
+                  </Stack>
+                </li>
+              );
+            }}
             renderInput={(params) => (
-              <TextField {...params} label="Search Customer" />
+              <TextField
+                {...params}
+                label="Search Customer or Driver"
+                placeholder="Type a name or phone number"
+                helperText="Check the colour label and outstanding amount before making a sale."
+                fullWidth
+              />
             )}
           />
+
+          {customer?.entityType === 'CUSTOMER' && (
+            <Alert
+              severity={getCustomerAlertSeverity(customer)}
+              sx={{ mt: 2 }}
+            >
+              <Typography fontWeight={700}>
+                {CUSTOMER_TYPES[getCustomerType(customer)].label}
+              </Typography>
+              <Typography variant="body2">
+                {CUSTOMER_TYPES[getCustomerType(customer)].description}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.5 }}>
+                Current outstanding: {formatRupees(customer.outstanding)}
+              </Typography>
+              <Typography variant="body2">
+                Credit limit: {Number(customer.credit_limit || 0) > 0
+                  ? formatRupees(customer.credit_limit)
+                  : '₹0 — no credit allowed for ORANGE customers'}
+              </Typography>
+            </Alert>
+          )}
         </Card>
+
+      )}
+
+      {creditWarning && (
+        <Alert
+          severity="warning"
+          onClose={() => setCreditWarning('')}
+          sx={{ whiteSpace: 'pre-line' }}
+        >
+          <Typography fontWeight={700}>Credit warning</Typography>
+          {creditWarning}
+        </Alert>
       )}
 
       <Dialog open={openModeDialog}>
+
         <DialogTitle>What do you want to do?</DialogTitle>
 
         <DialogContent>
+
           <Stack spacing={2} mt={1}>
+
             <Button
+
               variant="contained"
+
               onClick={() => {
+
                 setMode('SALE');
+
                 setOpenModeDialog(false);
+
               }}
+
             >
+
               Make Sale
+
             </Button>
 
             <Button
+
               variant="outlined"
+
               onClick={() => {
+
                 setMode('PAYMENT');
+
                 setOpenModeDialog(false);
 
                 // 🔥 IMPORTANT
+
                 setSelectedCages([]);
+
                 setCount(0);
+
                 setWeight(0);
+
                 setRate(0);
+
               }}
+
             >
+
               Take Payment Only
+
             </Button>
+
           </Stack>
+
         </DialogContent>
+
       </Dialog>
 
       {/* MULTI CAGE */}
-{customer && mode === 'SALE' && (
-  <Card sx={{ p: 2 }}>
-    <Typography variant="subtitle1" sx={{ mb: 2 }}>
-      Select Cage(s)
-    </Typography>
 
-    <Grid container spacing={2}>
-      {cages.map((cage) => {
-        const isSelected = selectedCages.some(
-          (c) => c.cage_number === cage.cage_number
-        );
+      {customer && mode === 'SALE' && (
 
-        const isDisabled = cage.remaining_birds <= 0;
+        <Card sx={{ p: 2 }}>
 
-        const approxRate = Number(trip?.approx_rate || 0);
-        const maxRate = approxRate + 15;
+          <Typography variant="subtitle1" sx={{ mb: 2 }}>
 
-        const cageWeight = Number(cage.remaining_weight || 0);
+            Select Cage(s)
 
-        const minAmount = approxRate * cageWeight;
-        const maxAmount = maxRate * cageWeight;
+          </Typography>
 
-        return (
-          <Grid item xs={4} sm={3} md={2} key={cage.cage_number}>
+          <Grid container spacing={2}>
+
+            {cages.map((cage) => {
+
+              const isSelected = selectedCages.some(
+
+                (c) => c.cage_number === cage.cage_number
+
+              );
+
+              const isDisabled = cage.remaining_birds <= 0;
+
+              const approxRate = Number(trip?.approx_rate || 0);
+
+              const maxRate = approxRate + 15;
+
+              const cageWeight = Number(cage.remaining_weight || 0);
+
+              const minAmount = approxRate * cageWeight;
+
+              const maxAmount = maxRate * cageWeight;
+
+              return (
+
+                <Grid item xs={4} sm={3} md={2} key={cage.cage_number}>
+
+                  <Card
+
+                    onClick={() => {
+
+                      if (isDisabled) return;
+
+                      if (isSelected) {
+
+                        setSelectedCages((prev) =>
+
+                          prev.filter(
+
+                            (c) => c.cage_number !== cage.cage_number
+
+                          )
+
+                        );
+
+                      } else {
+
+                        setSelectedCages((prev) => [...prev, cage]);
+
+                      }
+
+                    }}
+
+                    sx={{
+
+                      p: 1.5,
+
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+
+                      textAlign: 'center',
+
+                      bgcolor: getCageBgColor(isSelected, isDisabled),
+
+                      opacity: isDisabled ? 0.5 : 1,
+
+                      border: isSelected ? '2px solid' : '1px solid',
+
+                      borderColor: isSelected ? 'primary.main' : 'divider',
+
+                      transition: '0.2s',
+
+                    }}
+
+                  >
+
+                    <Typography variant="subtitle2">
+
+                      Cage #{cage.cage_number}
+
+                    </Typography>
+
+                    <Typography variant="caption" display="block">
+
+                      🐔 {cage.remaining_birds}
+
+                    </Typography>
+
+                    <Typography variant="caption" display="block">
+
+                      ⚖ {cageWeight.toFixed(2)} kg
+
+                    </Typography>
+
+                    <Typography
+
+                      variant="subtitle2"
+
+                      sx={{
+
+                        mt: 1,
+
+                        fontWeight: 700,
+
+                        color: 'success.main',
+
+                      }}
+
+                    >
+
+                      ₹{minAmount.toFixed(0)} - ₹{maxAmount.toFixed(0)}
+
+                    </Typography>
+
+                    {isDisabled && (
+
+                      <Typography
+
+                        variant="caption"
+
+                        color="error"
+
+                        display="block"
+
+                        sx={{ mt: 0.5 }}
+
+                      >
+
+                        Sold
+
+                      </Typography>
+
+                    )}
+
+                  </Card>
+
+                </Grid>
+
+              );
+
+            })}
+
+          </Grid>
+
+          {/* Expected Sale Range */}
+
+          {selectedCages.length > 0 && (
+
             <Card
-              onClick={() => {
-                if (isDisabled) return;
 
-                if (isSelected) {
-                  setSelectedCages((prev) =>
-                    prev.filter(
-                      (c) => c.cage_number !== cage.cage_number
-                    )
-                  );
-                } else {
-                  setSelectedCages((prev) => [...prev, cage]);
-                }
-              }}
+              variant="outlined"
+
               sx={{
-                p: 1.5,
-                cursor: isDisabled ? 'not-allowed' : 'pointer',
-                textAlign: 'center',
-                bgcolor: getCageBgColor(isSelected, isDisabled),
-                opacity: isDisabled ? 0.5 : 1,
-                border: isSelected ? '2px solid' : '1px solid',
-                borderColor: isSelected ? 'primary.main' : 'divider',
-                transition: '0.2s',
+
+                mt: 3,
+
+                p: 2,
+
+                bgcolor: 'success.lighter',
+
               }}
+
             >
-              <Typography variant="subtitle2">
-                Cage #{cage.cage_number}
+
+              <Typography variant="subtitle2" gutterBottom>
+
+                Expected Sale Range
+
               </Typography>
 
-              <Typography variant="caption" display="block">
-                🐔 {cage.remaining_birds}
-              </Typography>
+              {selectedCages.map((cage) => {
 
-              <Typography variant="caption" display="block">
-                ⚖ {cageWeight.toFixed(2)} kg
-              </Typography>
+                const cageWeight = Number(cage.remaining_weight || 0);
+
+                const minRate = Number(trip?.approx_rate || 0);
+
+                const maxRate = minRate + 15;
+
+                const minAmount = cageWeight * minRate;
+
+                const maxAmount = cageWeight * maxRate;
+
+                return (
+
+                  <Stack
+
+                    key={cage.cage_number}
+
+                    direction="row"
+
+                    justifyContent="space-between"
+
+                    alignItems="center"
+
+                    sx={{
+
+                      py: 1,
+
+                      borderBottom: '1px dashed',
+
+                      borderColor: 'divider',
+
+                    }}
+
+                  >
+
+                    <Typography fontWeight={600}>
+
+                      Cage #{cage.cage_number}
+
+                    </Typography>
+
+                    <Stack alignItems="flex-end">
+
+                      <Typography fontWeight={700}>
+
+                        ₹{minAmount.toFixed(0)} - ₹{maxAmount.toFixed(0)}
+
+                      </Typography>
+
+                      <Typography
+
+                        variant="caption"
+
+                        color="text.secondary"
+
+                      >
+
+                        ₹{minRate} - ₹{maxRate} × {cageWeight.toFixed(2)} kg
+
+                      </Typography>
+
+                    </Stack>
+
+                  </Stack>
+
+                );
+
+              })}
 
               <Typography
-                variant="subtitle2"
-                sx={{
-                  mt: 1,
-                  fontWeight: 700,
-                  color: 'success.main',
-                }}
+
+                variant="h6"
+
+                textAlign="right"
+
+                mt={2}
+
+                color="success.main"
+
+                fontWeight={700}
+
               >
-                ₹{minAmount.toFixed(0)} - ₹{maxAmount.toFixed(0)}
+
+                Expected Total : ₹
+
+                {selectedCages
+
+                  .reduce(
+
+                    (sum, cage) =>
+
+                      sum +
+
+                      Number(cage.remaining_weight || 0) *
+
+                      Number(trip?.approx_rate || 0),
+
+                    0
+
+                  )
+
+                  .toFixed(0)}
+
+                {' - '}
+
+                ₹
+
+                {selectedCages
+
+                  .reduce(
+
+                    (sum, cage) =>
+
+                      sum +
+
+                      Number(cage.remaining_weight || 0) *
+
+                      (Number(trip?.approx_rate || 0) + 15),
+
+                    0
+
+                  )
+
+                  .toFixed(0)}
+
               </Typography>
 
-              
-
-              {isDisabled && (
-                <Typography
-                  variant="caption"
-                  color="error"
-                  display="block"
-                  sx={{ mt: 0.5 }}
-                >
-                  Sold
-                </Typography>
-              )}
             </Card>
-          </Grid>
-        );
-      })}
-    </Grid>
 
-    {/* Expected Sale Range */}
-    {selectedCages.length > 0 && (
-      <Card
-        variant="outlined"
-        sx={{
-          mt: 3,
-          p: 2,
-          bgcolor: 'success.lighter',
-        }}
-      >
-        <Typography variant="subtitle2" gutterBottom>
-          Expected Sale Range
-        </Typography>
+          )}
 
-        {selectedCages.map((cage) => {
-          const cageWeight = Number(cage.remaining_weight || 0);
+          <Stack direction="row" spacing={1} mt={2}>
 
-          const minRate = Number(trip?.approx_rate || 0);
-          const maxRate = minRate + 15;
+            {SELL_TYPES.map((s) => (
 
-          const minAmount = cageWeight * minRate;
-          const maxAmount = cageWeight * maxRate;
+              <Chip
 
-          return (
-            <Stack
-              key={cage.cage_number}
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={{
-                py: 1,
-                borderBottom: '1px dashed',
-                borderColor: 'divider',
-              }}
-            >
-              <Typography fontWeight={600}>
-                Cage #{cage.cage_number}
-              </Typography>
+                key={s.value}
 
-              <Stack alignItems="flex-end">
-                <Typography fontWeight={700}>
-                  ₹{minAmount.toFixed(0)} - ₹{maxAmount.toFixed(0)}
-                </Typography>
+                label={s.label}
 
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                >
-                  ₹{minRate} - ₹{maxRate} × {cageWeight.toFixed(2)} kg
-                </Typography>
-              </Stack>
-            </Stack>
-          );
-        })}
+                color={sellType === s.value ? 'primary' : 'default'}
 
-        <Typography
-          variant="h6"
-          textAlign="right"
-          mt={2}
-          color="success.main"
-          fontWeight={700}
-        >
-          Expected Total : ₹
-          {selectedCages
-            .reduce(
-              (sum, cage) =>
-                sum +
-                Number(cage.remaining_weight || 0) *
-                  Number(trip?.approx_rate || 0),
-              0
-            )
-            .toFixed(0)}
-          {' - '}
-          ₹
-          {selectedCages
-            .reduce(
-              (sum, cage) =>
-                sum +
-                Number(cage.remaining_weight || 0) *
-                  (Number(trip?.approx_rate || 0) + 15),
-              0
-            )
-            .toFixed(0)}
-        </Typography>
-      </Card>
-    )}
+                onClick={() => setSellType(s.value)}
 
-    <Stack direction="row" spacing={1} mt={2}>
-      {SELL_TYPES.map((s) => (
-        <Chip
-          key={s.value}
-          label={s.label}
-          color={sellType === s.value ? 'primary' : 'default'}
-          onClick={() => setSellType(s.value)}
-        />
-      ))}
-    </Stack>
-  </Card>
-)}
+              />
+
+            ))}
+
+          </Stack>
+
+        </Card>
+
+      )}
 
       {/* SALE */}
+
       {mode === 'SALE' && selectedCages.length > 0 && (
+
         <>
+
           <Card sx={{ p: 2 }}>
+
             <Grid container spacing={2}>
 
               <Grid item xs={6}>
+
                 <TextField
+
                   label="Birds"
+
                   value={count}
+
                   disabled={sellType !== 'CUSTOM'}
+
                   onChange={(e) => setCount(e.target.value)}
+
                   fullWidth
+
                 />
+
               </Grid>
 
               <Grid item xs={6}>
+
                 <TextField
+
                   label="Weight (kg)"
+
                   value={weight}
+
                   disabled={sellType !== 'CUSTOM'}
+
                   onChange={(e) => setWeight(e.target.value)}
+
                   fullWidth
+
                 />
+
               </Grid>
 
               {/* 🔥 CALCULATION TOGGLE BACK */}
+
               <Grid item xs={12}>
+
                 <Typography variant="subtitle2">
+
                   Calculate Total By
+
                 </Typography>
 
                 <Stack direction="row" spacing={1} mt={1}>
+
                   <Chip
+
                     label="Weight × Rate"
+
                     color={calcBy === 'WEIGHT' ? 'primary' : 'default'}
+
                     onClick={() => setCalcBy('WEIGHT')}
+
                   />
+
                 </Stack>
+
               </Grid>
 
               <Grid item xs={6}>
+
                 <TextField
+
                   label="Rate"
+
                   value={rate}
+
                   onChange={(e) => setRate(e.target.value)}
+
                   fullWidth
+
                 />
+
               </Grid>
 
               <Grid item xs={6}>
+
                 <TextField
+
                   label="Total Amount"
+
                   value={totalAmount.toFixed(2)}
+
                   disabled
+
                   fullWidth
+
                 />
+
               </Grid>
 
             </Grid>
+
           </Card>
 
           <Card sx={{ p: 2 }}>
+
             <TextField
+
               select
+
               label="Payment Mode"
+
               value={paymentMode}
+
               onChange={(e) => setPaymentMode(e.target.value)}
+
               fullWidth
+
             >
+
               {PAYMENT_MODES.map((m) => (
+
                 <MenuItem key={m} value={m}>
+
                   {m}
+
                 </MenuItem>
+
               ))}
+
             </TextField>
 
             {(paymentMode === 'CASH' || paymentMode === 'BOTH') && (
+
               <TextField
+
                 sx={{ mt: 2 }}
+
                 label="Cash Amount"
+
                 value={payment.cash}
+
                 onChange={(e) =>
+
                   setPayment((p) => ({ ...p, cash: e.target.value }))
+
                 }
+
                 fullWidth
+
               />
+
             )}
 
             {(paymentMode === 'UPI' || paymentMode === 'BOTH') && (
+
               <>
+
                 <TextField
+
                   sx={{ mt: 2 }}
+
                   label="UPI Amount"
+
                   value={payment.upi}
+
                   onChange={(e) =>
+
                     setPayment((p) => ({ ...p, upi: e.target.value }))
+
                   }
+
                   fullWidth
+
                 />
 
                 {payment.upi && trip?.trader_upi_id && (
+
                   <Stack alignItems="center" mt={3} spacing={1}>
+
                     <Typography variant="subtitle2">
+
                       Scan To Pay ₹{payment.upi}
+
                     </Typography>
 
                     <QRCodeCanvas
+
                       value={generateUpiQrValue()}
+
                       size={220}
+
                       level="H"
+
                       includeMargin
+
                     />
 
                     <Typography variant="caption" color="text.secondary">
+
                       UPI ID: {trip.trader_upi_id}
+
                     </Typography>
+
                   </Stack>
+
                 )}
+
               </>
+
             )}
+
           </Card>
 
           <Button
+
             variant="contained"
+
             size="large"
+
             onClick={handleSaveSale}
+
             disabled={!rate || !paymentMode}          >
+
             Save Sale
+
           </Button>
+
         </>
+
       )}
 
       {mode === 'PAYMENT' && (
+
         <>
 
-
           <Card sx={{ p: 2 }}>
+
             <TextField
+
               select
+
               label="Payment Mode"
+
               value={paymentMode}
+
               onChange={(e) => setPaymentMode(e.target.value)}
+
               fullWidth
+
             >
+
               {PAYMENT_MODES.map((m) => (
+
                 <MenuItem key={m} value={m}>
+
                   {m}
+
                 </MenuItem>
+
               ))}
+
             </TextField>
 
             {(paymentMode === 'CASH' || paymentMode === 'BOTH') && (
+
               <TextField
+
                 sx={{ mt: 2 }}
+
                 label="Cash Amount"
+
                 value={payment.cash}
+
                 onChange={(e) =>
+
                   setPayment((p) => ({ ...p, cash: e.target.value }))
+
                 }
+
                 fullWidth
+
               />
+
             )}
 
             {(paymentMode === 'UPI' || paymentMode === 'BOTH') && (
+
               <>
+
                 <TextField
+
                   sx={{ mt: 2 }}
+
                   label="UPI Amount"
+
                   value={payment.upi}
+
                   onChange={(e) =>
+
                     setPayment((p) => ({ ...p, upi: e.target.value }))
+
                   }
+
                   fullWidth
+
                 />
 
                 {payment.upi && trip?.trader_upi_id && (
+
                   <Stack alignItems="center" mt={3} spacing={1}>
+
                     <Typography variant="subtitle2">
+
                       Scan To Pay ₹{payment.upi}
+
                     </Typography>
 
                     <QRCodeCanvas
+
                       value={generateUpiQrValue()}
+
                       size={220}
+
                       level="H"
+
                       includeMargin
+
                     />
+
                   </Stack>
+
                 )}
+
               </>
+
             )}
+
           </Card>
 
           <Button
+
             variant="contained"
+
             size="large"
+
             onClick={handleSaveSale}
+
             disabled={!paymentMode}
+
           >
+
             Save Payment
+
           </Button>
+
         </>
+
       )}
+
     </Stack>
+
   );
+
 }

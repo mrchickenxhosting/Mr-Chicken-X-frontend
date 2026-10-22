@@ -50,6 +50,7 @@ export default function DriverTripsPage() {
   // ----------------------------------------------------------------------
   // FETCH TRIPS
 
+
 const fetchTrips = async () => {
   try {
     const response = await getallTrips();
@@ -62,11 +63,17 @@ const fetchTrips = async () => {
       tripList = response.trips;
     } else if (Array.isArray(response?.data)) {
       tripList = response.data;
+    } else if (Array.isArray(response?.data?.trips)) {
+      tripList = response.data.trips;
     }
 
     setTrips(tripList);
+
+    // Return the refreshed list for post-save actions.
+    return tripList;
   } catch (error) {
     console.error('Failed to fetch trips:', error);
+    return [];
   }
 };
 
@@ -134,130 +141,134 @@ const fetchTrips = async () => {
   // ----------------------------------------------------------------------
   // WHATSAPP MESSAGE
 
-  const generateTripWhatsAppMessage = (trip) => `
-🚚 *ટ્રિપ સોંપવામાં આવી છે*
+//   const generateTripWhatsAppMessage = (trip) => `
+// 🚚 *ટ્રિપ સોંપવામાં આવી છે*
 
-📅 તારીખ: ${
-    trip.trip_date
-      ? new Date(trip.trip_date).toLocaleDateString('en-IN')
-      : '-'
-  }
-⏰ સમય: ${trip.trip_time || '-'}
+// 📅 તારીખ: ${
+//     trip.trip_date
+//       ? new Date(trip.trip_date).toLocaleDateString('en-IN')
+//       : '-'
+//   }
+// ⏰ સમય: ${trip.trip_time || '-'}
 
-📍 સ્થળ: ${trip.farm_location || '-'}
+// 📍 સ્થળ: ${trip.farm_location || '-'}
 
-👨‍🌾 ખેડૂત: ${trip.farmer_name || '-'}
-📞 ખેડૂત સંપર્ક: ${trip.farmer_mobile || '-'}
+// 👨‍🌾 ખેડૂત: ${trip.farmer_name || '-'}
+// 📞 ખેડૂત સંપર્ક: ${trip.farmer_mobile || '-'}
 
-🚛 ડ્રાઈવર: ${trip.driver_name || '-'}
-📞 ડ્રાઈવર સંપર્ક: ${trip.driver_mobile || '-'}
+// 🚛 ડ્રાઈવર: ${trip.driver_name || '-'}
+// 📞 ડ્રાઈવર સંપર્ક: ${trip.driver_mobile || '-'}
 
-🧍 લિફ્ટર: ${trip.lifter_name || '-'}
-📞 લિફ્ટર સંપર્ક: ${trip.lifter_mobile || '-'}
+// 🧍 લિફ્ટર: ${trip.lifter_name || '-'}
+// 📞 લિફ્ટર સંપર્ક: ${trip.lifter_mobile || '-'}
 
-${trip.broker_name ? `🤝 બ્રોકર: ${trip.broker_name}\n` : ''}
-${
-  trip.contact_name
-    ? `👤 સંપર્ક વ્યક્તિ: ${trip.contact_name}
-📞 સંપર્ક નંબર: ${trip.contact_phone || '-'}`
-    : ''
-}
+// ${trip.broker_name ? `🤝 બ્રોકર: ${trip.broker_name}\n` : ''}
+// ${
+//   trip.contact_name
+//     ? `👤 સંપર્ક વ્યક્તિ: ${trip.contact_name}
+// 📞 સંપર્ક નંબર: ${trip.contact_phone || '-'}`
+//     : ''
+// }
 
-🐔 કુલ પક્ષીઓ: ${trip.total_birds ?? '-'}
+// 🐔 કુલ પક્ષીઓ: ${trip.total_birds ?? '-'}
 
-કૃપા કરીને સમયસર પહોંચો અને લોડિંગ પછી સ્ટેટસ અપડેટ કરો.
+// કૃપા કરીને સમયસર પહોંચો અને લોડિંગ પછી સ્ટેટસ અપડેટ કરો.
 
-— Dispatch Team
+// — Dispatch Team
 
 
-🚚 *New Trip Assigned*
+// 🚚 *New Trip Assigned*
 
-📅 Date: ${
-    trip.trip_date
-      ? new Date(trip.trip_date).toLocaleDateString('en-IN')
-      : '-'
-  }
-⏰ Time: ${trip.trip_time || '-'}
+// 📅 Date: ${
+//     trip.trip_date
+//       ? new Date(trip.trip_date).toLocaleDateString('en-IN')
+//       : '-'
+//   }
+// ⏰ Time: ${trip.trip_time || '-'}
 
-📍 Location: ${trip.farm_location || '-'}
+// 📍 Location: ${trip.farm_location || '-'}
 
-👨‍🌾 Farmer: ${trip.farmer_name || '-'}
-📞 Farmer Contact: ${trip.farmer_mobile || '-'}
+// 👨‍🌾 Farmer: ${trip.farmer_name || '-'}
+// 📞 Farmer Contact: ${trip.farmer_mobile || '-'}
 
-🚛 Driver: ${trip.driver_name || '-'}
-📞 Driver Contact: ${trip.driver_mobile || '-'}
+// 🚛 Driver: ${trip.driver_name || '-'}
+// 📞 Driver Contact: ${trip.driver_mobile || '-'}
 
-🧍 Lifter: ${trip.lifter_name || '-'}
-📞 Lifter Contact: ${trip.lifter_mobile || '-'}
+// 🧍 Lifter: ${trip.lifter_name || '-'}
+// 📞 Lifter Contact: ${trip.lifter_mobile || '-'}
 
-${trip.broker_name ? `🤝 Broker: ${trip.broker_name}\n` : ''}
-${
-  trip.contact_name
-    ? `👤 Contact Person: ${trip.contact_name}
-📞 Contact No: ${trip.contact_phone || '-'}`
-    : ''
-}
+// ${trip.broker_name ? `🤝 Broker: ${trip.broker_name}\n` : ''}
+// ${
+//   trip.contact_name
+//     ? `👤 Contact Person: ${trip.contact_name}
+// 📞 Contact No: ${trip.contact_phone || '-'}`
+//     : ''
+// }
 
-🐔 Total Birds: ${trip.total_birds ?? '-'}
+// 🐔 Total Birds: ${trip.total_birds ?? '-'}
 
-Please reach on time and update status after loading.
+// Please reach on time and update status after loading.
 
-— Dispatch Team
-`;
+// — Dispatch Team
+// `;
 
-  const sendTripWhatsApp = (trip) => {
-    if (!trip?.driver_mobile) {
-      console.warn('Driver mobile missing, WhatsApp not sent');
-      return;
-    }
+//   const sendTripWhatsApp = (trip) => {
+//     if (!trip?.driver_mobile) {
+//       console.warn('Driver mobile missing, WhatsApp not sent');
+//       return;
+//     }
 
-    const phone = `91${String(trip.driver_mobile).replace(/\D/g, '')}`;
-    const message = generateTripWhatsAppMessage(trip);
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+//     const phone = `91${String(trip.driver_mobile).replace(/\D/g, '')}`;
+//     const message = generateTripWhatsAppMessage(trip);
+//     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
+//     window.open(url, '_blank', 'noopener,noreferrer');
+//   };
 
   // ----------------------------------------------------------------------
   // SAVE TRIP (CREATE / UPDATE)
 
-  const handleSaveTrip = async (payload) => {
-    try {
-      let response;
 
-      if (!selectedTrip) {
-        response = await CreateTrip(payload);
-      } else {
-        response = await updateTrip(selectedTrip.id, payload);
-      }
 
-      const savedTrip = response?.trip || response?.data?.trip || response?.data || response;
 
-      // Close the dialog and reset selection.
-      setOpenDialog(false);
-      setSelectedTrip(null);
+const handleSaveTrip = async (payload, options = {}) => {
+  try {
+    let response;
 
-      // Refresh trips so the broker name and other joined fields are up to date.
-      await fetchTrips();
-
-      // Preserve the existing WhatsApp behavior.
-      if (savedTrip?.driver_mobile) {
-        sendTripWhatsApp(savedTrip);
-      } else {
-        console.warn(
-          'Driver mobile not found in the save response; WhatsApp not sent.'
-        );
-      }
-    } catch (error) {
-      console.error('Trip save failed:', error);
-
-      alert(
-        error?.response?.data?.message ||
-          error?.message ||
-          'Failed to save trip'
-      );
+    if (selectedTrip?.id) {
+      response = await updateTrip(selectedTrip.id, payload);
+    } else {
+      response = await CreateTrip(payload);
     }
-  };
+
+    await fetchTrips();
+
+    if (options.keepOpen) {
+      const savedTrip =
+        response?.data?.trip ||
+        response?.data?.data ||
+        response?.data;
+
+      if (savedTrip?.id) {
+        setSelectedTrip(savedTrip);
+      }
+
+      // Keep the dialog open only when explicitly requested
+      // for continuing Stage 2.
+      if (options.continueStageTwo) {
+        return;
+      }
+    }
+
+    // Close after a successful save.
+    setOpenDialog(false);
+    setSelectedTrip(null);
+  } catch (error) {
+    console.error('Failed to save trip:', error);
+  }
+};
+
+
 
   // ----------------------------------------------------------------------
   // DELETE TRIP
@@ -292,8 +303,6 @@ Please reach on time and update status after loading.
     setOpenDialog(true);
   };
 
-  // ----------------------------------------------------------------------
-  // RENDER
 
   return (
     <Container maxWidth="xxl">
@@ -329,26 +338,29 @@ Please reach on time and update status after loading.
           <Scrollbar>
             <TableContainer sx={{ overflow: 'unset' }}>
               <Table sx={{ minWidth: 1100 }}>
-                <UserTableHead
-                  order={order}
-                  orderBy={orderBy}
-                  onRequestSort={handleSort}
-                  headLabel={[
-                    { id: 'id', label: 'Trip ID' },
-                    { id: 'trip_date', label: 'Date' },
-                    { id: 'trip_time', label: 'Time' },
-                    { id: 'farmer_name', label: 'Farmer/Driver' },
-                    { id: 'driver_name', label: 'Driver' },
-                    { id: 'lifter_name', label: 'Lifter' },
-                    { id: 'broker_name', label: 'Broker' },
-                    { id: 'contact_name', label: 'Contact Person' },
-                    { id: 'total_birds', label: 'Birds' },
-                    { id: 'approx_rate', label: 'Approx. Rate' },
-                    { id: 'status', label: 'Status' },
-                    { id: 'whatsapp', label: 'WhatsApp' },
-                    { id: '' },
-                  ]}
-                />
+                
+<UserTableHead
+  order={order}
+  orderBy={orderBy}
+  onRequestSort={handleSort}
+  headLabel={[
+    { id: 'id', label: 'Trip ID' },
+    { id: 'trip_date', label: 'Date' },
+    { id: 'trip_time', label: 'Time' },
+    { id: 'source_type', label: 'Source' },
+    { id: 'driver_name', label: 'Driver' },
+    { id: 'lifter_name', label: 'Lifter' },
+    { id: 'broker_name', label: 'Broker' },
+    { id: 'contact_name', label: 'Contact Person' },
+    { id: 'total_birds', label: 'Birds' },
+    { id: 'approx_rate', label: 'Approx. Rate' },
+    { id: 'status', label: 'Status' },
+    { id: 'broker_action', label: 'Broker Action' },
+    { id: 'whatsapp', label: 'WhatsApp' },
+    { id: '' },
+  ]}
+/>
+
 
                 <TableBody>
                   {dataFiltered
@@ -357,15 +369,21 @@ Please reach on time and update status after loading.
                       page * rowsPerPage + rowsPerPage
                     )
                     .map((row) => (
-                      <UserTableRow
-                        key={row.id}
-                        row={row}
-                        onEdit={(trip) => {
-                          setSelectedTrip(trip);
-                          setOpenDialog(true);
-                        }}
-                        onDelete={() => handleDeleteTrip(row.id)}
-                      />
+                      
+<UserTableRow
+  key={row.id}
+  row={row}
+  onEdit={(trip) => {
+    setSelectedTrip(trip);
+    setOpenDialog(true);
+  }}
+  onDelete={() => handleDeleteTrip(row.id)}
+  onOpenBrokerDialog={(trip) => {
+    setSelectedTrip(trip);
+    setOpenDialog(true);
+  }}
+/>
+
                     ))}
 
                   <TableEmptyRows
@@ -392,14 +410,18 @@ Please reach on time and update status after loading.
               )
               .map((row) => (
                 <UserCard
-                  key={row.id}
-                  row={row}
-                  onEdit={(trip) => {
-                    setSelectedTrip(trip);
-                    setOpenDialog(true);
-                  }}
-                  onDeleteTrip={handleDeleteTrip}
-                />
+  key={row.id}
+  row={row}
+  onEdit={(trip) => {
+    setSelectedTrip(trip);
+    setOpenDialog(true);
+  }}
+  onDeleteTrip={handleDeleteTrip}
+  onOpenBrokerDialog={(trip) => {
+    setSelectedTrip(trip);
+    setOpenDialog(true);
+  }}
+/>
               ))}
 
             {!dataFiltered.length && <TableNoData query={filterName} />}

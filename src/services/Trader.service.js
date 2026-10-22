@@ -326,3 +326,26 @@ export const deleteBroker = async (brokerId) => {
   );
   return response.data;
 };
+
+// ======================= Broker Trips ===========================
+
+// Get trips assigned to the logged-in broker
+export const getBrokerTrips = async () => {
+  const response = await axios.get('trader/broker/trips');
+  return response.data;
+};
+
+// Update permitted fields for an assigned broker trip
+export const updateBrokerTrip = async (tripId, payload) => {
+  const response = await axios.patch(
+    `trader/broker/trips/${tripId}`,
+    payload
+  );
+  return response.data;
+};
+
+
+export const getTripDC = async (tripId) => {
+  const response = await axios.get(`trader/trips/${tripId}/dc`);
+  return response.data;
+};
