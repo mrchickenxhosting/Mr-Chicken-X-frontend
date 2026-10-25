@@ -46,7 +46,7 @@ const safeNumber = (val) => Number(val || 0);
 
 export default function ReportPage() {
 
-  const [loading, setLoading] = useState(true);
+   const [loading, setLoading] = useState(true);
   const [reportLoading, setReportLoading] = useState(false);
 
   const [trips, setTrips] = useState([]);
@@ -54,6 +54,7 @@ export default function ReportPage() {
 
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerOutstanding, setCustomerOutstanding] = useState(0);
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -156,22 +157,45 @@ setRows(
   // --------------------------------------------------
   // CUSTOMER LEDGER
 
-  const handleCustomerChange = async (customer) => {
-    setSelectedCustomer(customer);
-    setSelectedTrip(null);
+
+const handleCustomerChange = async (customer) => {
+  setSelectedCustomer(customer);
+  setSelectedTrip(null);
+  setRows([]);
+  setExpenses([]);
+  setCustomerOutstanding(0);
+
+  if (!customer) return;
+
+  try {
+    setReportLoading(true);
+
+    const res = await getCustomerSalesDetails(customer.id);
+
+    // Support both direct and nested API response formats.
+    const responseData = res?.data ?? res;
+    const resultData = responseData?.rows ?? responseData;
+
+    setRows(
+      Array.isArray(resultData?.rows)
+        ? resultData.rows
+        : Array.isArray(resultData)
+          ? resultData
+          : []
+    );
+
+    setCustomerOutstanding(
+      Number(resultData?.total_outstanding ?? responseData?.total_outstanding ?? 0)
+    );
+  } catch (error) {
+    console.error('Failed to load customer sales details:', error);
     setRows([]);
-    setExpenses([]);
+    setCustomerOutstanding(0);
+  } finally {
+    setReportLoading(false);
+  }
+};
 
-    if (!customer) return;
-
-    try {
-      setReportLoading(true);
-      const res = await getCustomerSalesDetails(customer.id);
-      setRows(res.rows || res || []);
-    } finally {
-      setReportLoading(false);
-    }
-  };
 
   // --------------------------------------------------
 
@@ -254,13 +278,14 @@ const totalSales = isSummaryMode
 
   // --------------------------------------------------
 
-  const handleExportExcel = () => {
+
+const handleExportExcel = () => {
   let exportData = [];
-  let fileName = "Report.xlsx";
+  let fileName = 'Report.xlsx';
 
   // Trip Summary Report
   if (!selectedTrip && !selectedCustomer) {
-    fileName = "Trip_Report.xlsx";
+    fileName = 'Trip_Report.xlsx';
 
     exportData = rows.map((row) => ({
       Date: formatDate(row.trip_date),
@@ -286,7 +311,7 @@ const totalSales = isSummaryMode
 
     exportData = rows.map((row) => ({
       Date: formatDate(row.sale_date),
-      Customer: row.customer_name,
+      Customer: row.customer_name || '-',
       Birds: row.bird_count,
       Weight: row.weight,
       Rate: row.rate,
@@ -299,45 +324,99 @@ const totalSales = isSummaryMode
 
   // Customer Ledger
   if (selectedCustomer) {
-    fileName = `${selectedCustomer.name}_Ledger.xlsx`;
+    const safeFileName = `${selectedCustomer.name || 'Customer'}_Ledger`
+      .replace(/[<>:"/\\|?*]/g, '_');
 
-    exportData = rows.map((row) => ({
+    fileName = `${safeFileName}.xlsx`;
+
+    // Outstanding summary at the top of the worksheet
+    const outstandingSummary = [
+      { 'Customer Name': selectedCustomer.name || '-' },
+      {
+        'Total Outstanding': Number(customerOutstanding || 0),
+      },
+      {}, // Blank row before transaction details
+    ];
+
+    // Customer sales details
+    const customerSalesData = rows.map((row) => ({
       Date: formatDate(row.sale_date),
-      Trip: row.trip_id,
-      Birds: row.bird_count,
-      Weight: row.weight,
-      Amount: row.total_amount,
-      Cash: row.cash_amount,
-      UPI: row.upi_amount,
-      Pending: row.pending,
+      Trip: row.trip_id ?? '-',
+      Birds: row.bird_count ?? 0,
+      Weight: Number(row.weight || 0),
+      Rate: Number(row.rate || 0),
+      Amount: Number(row.total_amount || 0),
+      Cash: Number(row.cash_amount || 0),
+      UPI: Number(row.upi_amount || 0),
+      Pending: Number(row.pending || 0),
     }));
+
+    // Create worksheet with summary and sales table
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ['Customer Ledger'],
+      ['Customer Name', selectedCustomer.name || '-'],
+      [
+        'Total Outstanding',
+        Number(customerOutstanding || 0),
+      ],
+      [],
+      [
+        'Date',
+        'Trip',
+        'Birds',
+        'Weight',
+        'Rate',
+        'Amount',
+        'Cash',
+        'UPI',
+        'Pending',
+      ],
+    ]);
+
+    // Add transaction rows below the headers
+    XLSX.utils.sheet_add_json(worksheet, customerSalesData, {
+      origin: 'A6',
+      skipHeader: true,
+    });
+
+    // Set useful column widths
+    worksheet['!cols'] = [
+      { wch: 16 }, // Date
+      { wch: 12 }, // Trip
+      { wch: 10 }, // Birds
+      { wch: 12 }, // Weight
+      { wch: 12 }, // Rate
+      { wch: 15 }, // Amount
+      { wch: 15 }, // Cash
+      { wch: 15 }, // UPI
+      { wch: 15 }, // Pending
+    ];
+
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      'Customer Ledger'
+    );
+
+    XLSX.writeFile(workbook, fileName);
+    return;
   }
 
+  // Export Trip Summary or Trip Sales
   const worksheet = XLSX.utils.json_to_sheet(exportData);
-
   const workbook = XLSX.utils.book_new();
 
   XLSX.utils.book_append_sheet(
     workbook,
     worksheet,
-    "Report"
+    'Report'
   );
 
-  const excelBuffer = XLSX.write(workbook, {
-    bookType: "xlsx",
-    type: "array",
-  });
-
-  const file = new Blob(
-    [excelBuffer],
-    {
-      type:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    }
-  );
-
-  saveAs(file, fileName);
+  XLSX.writeFile(workbook, fileName);
 };
+
   return (
     <Stack spacing={3}>
       <Typography variant="h5">Reports</Typography>
@@ -439,54 +518,115 @@ const totalSales = isSummaryMode
             {reportTitle}
           </Typography>
 
-          <Grid container spacing={2} mb={2}>
-  <Grid item xs={3}>
-    <Card sx={{ p: 2 }}>
-      <Typography variant="caption">
+
+
+<Grid
+  container
+  spacing={1}
+  mb={2}
+  sx={{
+    flexWrap: 'nowrap',
+    width: '100%',
+    m: 0,
+  }}
+>
+  {/* Total Sales */}
+  <Grid item sx={{ flex: '1 1 0', minWidth: 0 }}>
+    <Card sx={{ p: 1.5, height: '100%' }}>
+      <Typography variant="caption" noWrap>
         Total Sales
       </Typography>
-      <Typography variant="h5">
-        ₹{totalSales.toLocaleString()}
+      <Typography variant="h6" noWrap>
+        ₹{totalSales.toLocaleString('en-IN')}
       </Typography>
     </Card>
   </Grid>
 
-  <Grid item xs={3}>
-    <Card sx={{ p: 2 }}>
-      <Typography variant="caption">
+  {/* Total Birds Sold */}
+  <Grid item sx={{ flex: '1 1 0', minWidth: 0 }}>
+    <Card sx={{ p: 1.5, height: '100%' }}>
+      <Typography variant="caption" noWrap>
         Total Birds Sold
       </Typography>
-      <Typography variant="h5">
+      <Typography variant="h6" noWrap>
         {totalSoldBirds}
       </Typography>
     </Card>
   </Grid>
 
-  <Grid item xs={3}>
-    <Card sx={{ p: 2 }}>
-      <Typography variant="caption">
+  {/* Total Weight */}
+  <Grid item sx={{ flex: '1 1 0', minWidth: 0 }}>
+    <Card sx={{ p: 1.5, height: '100%' }}>
+      <Typography variant="caption" noWrap>
         Total Weight
       </Typography>
-      <Typography variant="h5">
+      <Typography variant="h6" noWrap>
         {totalSoldWeight.toFixed(2)} KG
       </Typography>
     </Card>
   </Grid>
 
-  <Grid item xs={3}>
-    <Card sx={{ p: 2 }}>
-      <Typography variant="caption">
+  {/* Customer Outstanding */}
+  {selectedCustomer && (
+    <Grid item sx={{ flex: '1 1 0', minWidth: 0 }}>
+      <Card
+        sx={{
+          p: 1.5,
+          height: '100%',
+          border: '1px solid',
+          borderColor: 'warning.light',
+          bgcolor: 'warning.lighter',
+        }}
+      >
+        <Typography variant="caption" noWrap>
+          Total Outstanding
+        </Typography>
+        <Typography variant="h6" color="warning.dark" noWrap>
+          ₹{Number(customerOutstanding || 0).toLocaleString('en-IN', {
+            maximumFractionDigits: 2,
+          })}
+        </Typography>
+      </Card>
+    </Grid>
+  )}
+
+  {/* Total Expense */}
+  {isSummaryMode && (
+    <Grid item sx={{ flex: '1 1 0', minWidth: 0 }}>
+      <Card sx={{ p: 1.5, height: '100%' }}>
+        <Typography variant="caption" noWrap>
+          Total Expense
+        </Typography>
+        <Typography variant="h6" color="error.main" noWrap>
+          ₹{rows
+            .reduce(
+              (sum, row) => sum + safeNumber(row.total_expense),
+              0
+            )
+            .toLocaleString('en-IN', {
+              maximumFractionDigits: 2,
+            })}
+        </Typography>
+      </Card>
+    </Grid>
+  )}
+
+  {/* Pending */}
+  <Grid item sx={{ flex: '1 1 0', minWidth: 0 }}>
+    <Card sx={{ p: 1.5, height: '100%' }}>
+      <Typography variant="caption" noWrap>
         Pending
       </Typography>
-      <Typography
-        variant="h5"
-        color="warning.main"
-      >
-        ₹{totalPending.toLocaleString()}
+      <Typography variant="h6" color="warning.main" noWrap>
+        ₹{totalPending.toLocaleString('en-IN', {
+          maximumFractionDigits: 2,
+        })}
       </Typography>
     </Card>
   </Grid>
 </Grid>
+
+
 
 
           {/* SUMMARY MODE */}

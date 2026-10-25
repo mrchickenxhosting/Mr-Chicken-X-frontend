@@ -203,199 +203,373 @@ ${
   // Show / Download DC
   // ----------------------------------------------------------------------
 
-  const handleShowDC = async () => {
-    if (String(row.status || '').toUpperCase() !== 'CLOSED') return;
 
-    // Open synchronously from the click to avoid popup blocking.
-    const dcWindow = window.open('', '_blank');
-    if (!dcWindow) {
-      window.alert('Please allow pop-ups to open the Delivery Challan.');
-      return;
+const handleShowDC = async () => {
+  if (String(row.status || '').toUpperCase() !== 'CLOSED') return;
+
+  // Open synchronously from the click to avoid popup blocking.
+  const dcWindow = window.open('', '_blank');
+
+  if (!dcWindow) {
+    window.alert('Please allow pop-ups to open the Delivery Challan.');
+    return;
+  }
+
+  dcWindow.document.open();
+  dcWindow.document.write(`
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Delivery Challan - Trip #${escapeHtml(row.id)}</title>
+        <style>
+          body{margin:0;padding:32px;background:#080808;color:#f5f5f5;font-family:Arial,Helvetica,sans-serif}
+          .container{max-width:1000px;margin:0 auto}.muted{color:#aaa}
+          .header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+          h1{margin:0 0 8px;font-size:30px}.actions{display:flex;gap:10px;margin:24px 0}
+          button{padding:12px 18px;border:0;border-radius:7px;font-weight:bold;cursor:pointer}
+          .print{background:#fff;color:#111}.close{background:#292929;color:#fff}
+          .details,.summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:24px 0}
+          .summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+          .card{background:#171717;border:1px solid #333;border-radius:10px;padding:16px;min-width:0}
+          .label{color:#aaa;font-size:12px;margin-bottom:7px}.value{font-size:18px;font-weight:bold;overflow-wrap:anywhere}
+          .summary .value{font-size:26px;margin-top:10px}.table-wrap{overflow-x:auto}
+          table{width:100%;border-collapse:collapse;margin-top:18px}th,td{padding:13px;border-bottom:1px solid #333;text-align:left}
+          th{background:#202020}.right{text-align:right}.empty{color:#aaa;text-align:center}
+          .footer{margin-top:35px;border-top:1px solid #333;padding-top:16px;color:#aaa;font-size:12px}
+          @media(max-width:600px){body{padding:16px}.details,.summary{grid-template-columns:1fr}}
+          @media print{body{background:#fff;color:#111;padding:0}.actions{display:none}.card,th{background:#fff;color:#111}.card,th,td{border-color:#bbb}.muted,.label,.footer{color:#555}.table-wrap{overflow:visible}tr{break-inside:avoid}}
+        </style>
+      </head>
+      <body>
+        <main class="container">
+          <h1>Delivery Challan</h1>
+          <p>Loading trip details...</p>
+        </main>
+      </body>
+    </html>
+  `);
+  dcWindow.document.close();
+
+  try {
+    const response = await getTripDC(row.id);
+
+    // Supports Axios response, { success, data }, or a direct payload.
+    const responseBody = response?.data ?? response;
+
+    if (responseBody?.success === false) {
+      throw new Error(
+        responseBody.message || 'Unable to load Delivery Challan.'
+      );
     }
 
+    const dc = responseBody?.data ?? responseBody;
+
+    if (!dc || typeof dc !== 'object') {
+      throw new Error(
+        'The server returned an invalid Delivery Challan response.'
+      );
+    }
+
+    const cages = Array.isArray(dc.cages) ? dc.cages : [];
+
+    const rawDate = dc.trip_date || row.trip_date;
+
+    const date =
+      rawDate && !Number.isNaN(new Date(rawDate).getTime())
+        ? new Date(rawDate).toLocaleDateString('en-IN')
+        : '-';
+
+    const rawTime = String(dc.trip_time || row.trip_time || '').trim();
+    const timeMatch = rawTime.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+
+    const time = timeMatch
+      ? new Date(
+          2000,
+          0,
+          1,
+          Number(timeMatch[1]),
+          Number(timeMatch[2])
+        ).toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        })
+      : rawTime || '-';
+
+    const totalCages = Number(dc.total_cages ?? cages.length);
+
+    const totalBirds = Number(
+      dc.total_birds ??
+        cages.reduce(
+          (sum, cage) => sum + Number(cage.total_birds || 0),
+          0
+        )
+    );
+
+    const totalWeight = Number(
+      dc.total_weight ??
+        cages.reduce(
+          (sum, cage) => sum + Number(cage.total_weight || 0),
+          0
+        )
+    );
+
+    // Trip-level purchase rate and total purchase cost.
+    // No purchase cost is calculated or displayed per cage.
+    const purchaseRatePerKg = Number(dc.purchase_rate_per_kg ?? 0);
+
+    const totalPurchaseCost = Number(
+      (totalWeight * purchaseRatePerKg).toFixed(2)
+    );
+
+    const groupsPerRow = 3;
+    const cageGridRows = [];
+
+    for (let i = 0; i < cages.length; i += groupsPerRow) {
+      const group = cages.slice(i, i + groupsPerRow);
+
+      cageGridRows.push(
+        `<tr>${Array.from({ length: groupsPerRow }, (_, j) => {
+          const cage = group[j];
+
+          return cage
+            ? `<td class="cage-no">${escapeHtml(cage.cage_number)}</td>
+               <td class="num">${formatNumber(cage.total_birds)}</td>
+               <td class="num">${formatNumber(cage.total_weight)}</td>`
+            : '<td></td><td></td><td></td>';
+        }).join('')}</tr>`
+      );
+    }
+
+    const cageTableRows = cageGridRows.join('');
+
+    const tripId = dc.trip_id ?? row.id;
+    const companyName = dc.trader_name || 'BIRD SUPPLIER';
+
+    const sourceName =
+      dc.farmer_name ||
+      (String(row.source_type || '').toLowerCase() === 'broker'
+        ? row.broker_name || '-'
+        : '-');
+
+    const sourcePhone = dc.farmer_number || '-';
+
+    const location =
+      dc.farm_location || row.farm_location || row.farmer_location || '-';
+
+    const currentSourceType =
+      typeof sourceType !== 'undefined'
+        ? sourceType
+        : row.source_type || 'farmer';
+
+    if (dcWindow.closed) return;
+
     dcWindow.document.open();
+
     dcWindow.document.write(`
       <!DOCTYPE html>
       <html lang="en">
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>Delivery Challan - Trip #${escapeHtml(row.id)}</title>
+          <title>Bird Challan - Trip #${escapeHtml(tripId)}</title>
           <style>
-            body{margin:0;padding:32px;background:#080808;color:#f5f5f5;font-family:Arial,Helvetica,sans-serif}
-            .container{max-width:1000px;margin:0 auto}.muted{color:#aaa}
-            .header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
-            h1{margin:0 0 8px;font-size:30px}.actions{display:flex;gap:10px;margin:24px 0}
-            button{padding:12px 18px;border:0;border-radius:7px;font-weight:bold;cursor:pointer}
-            .print{background:#fff;color:#111}.close{background:#292929;color:#fff}
-            .details,.summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:24px 0}
-            .summary{grid-template-columns:repeat(3,minmax(0,1fr))}
-            .card{background:#171717;border:1px solid #333;border-radius:10px;padding:16px;min-width:0}
-            .label{color:#aaa;font-size:12px;margin-bottom:7px}.value{font-size:18px;font-weight:bold;overflow-wrap:anywhere}
-            .summary .value{font-size:26px;margin-top:10px}.table-wrap{overflow-x:auto}
-            table{width:100%;border-collapse:collapse;margin-top:18px}th,td{padding:13px;border-bottom:1px solid #333;text-align:left}
-            th{background:#202020}.right{text-align:right}.empty{color:#aaa;text-align:center}
-            .footer{margin-top:35px;border-top:1px solid #333;padding-top:16px;color:#aaa;font-size:12px}
-            @media(max-width:600px){body{padding:16px}.details,.summary{grid-template-columns:1fr}}
-            @media print{body{background:#fff;color:#111;padding:0}.actions{display:none}.card,th{background:#fff;color:#111}.card,th,td{border-color:#bbb}.muted,.label,.footer{color:#555}.table-wrap{overflow:visible}tr{break-inside:avoid}}
+            *{box-sizing:border-box}
+            body{margin:0;background:#e9e9e9;color:#111;font-family:Arial,Helvetica,sans-serif;font-size:12px}
+            .sheet{width:100%;max-width:1100px;margin:18px auto;background:#fff;padding:22px 26px;border:1px solid #ccc}
+            .topline{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:2px solid #222;padding-bottom:10px}
+            .copy{font-size:10px;font-weight:bold;border:1px solid #555;padding:4px 7px;text-transform:uppercase}
+            .brand{text-align:center;flex:1}
+            .brand h1{font-size:24px;margin:0 0 4px;letter-spacing:.4px;text-transform:uppercase}
+            .brand h2{font-size:16px;margin:0 0 5px;text-transform:uppercase}
+            .brand p{margin:2px 0;font-size:10px}
+            .challan-no{min-width:130px;border:1px solid #555;padding:8px;line-height:1.8}
+            .challan-no strong{font-size:13px}
+            .doc-title{text-align:center;font-weight:bold;font-size:15px;letter-spacing:.8px;margin:12px 0;background:#eee;border:1px solid #aaa;padding:7px;text-transform:uppercase}
+            .meta{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;margin-bottom:10px}
+            .meta-table{width:100%;border-collapse:collapse}
+            .meta-table td{border:1px solid #777;padding:5px 7px;vertical-align:top}
+            .meta-table td:first-child{width:42%;font-weight:bold;background:#f7f7f7}
+            .section-title{font-size:11px;font-weight:bold;text-transform:uppercase;margin:10px 0 4px}
+            .cage-table{width:100%;border-collapse:collapse;table-layout:fixed}
+            .cage-table th,.cage-table td{border:1px solid #555;padding:5px 4px;height:24px}
+            .cage-table th{background:#eee;text-align:center;font-size:10px}
+            .cage-table td{font-size:11px}
+            .cage-table .cage-no{text-align:center;width:6%;font-weight:800;background:#f1f1f1;font-size:12px}
+            .cage-table .num{text-align:right;width:10%;font-variant-numeric:tabular-nums}
+            .totals{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;margin-top:12px}
+            .totals-table{width:100%;border-collapse:collapse}
+            .totals-table td{border:1px solid #777;padding:7px}
+            .totals-table td:first-child{font-weight:bold;background:#f7f7f7;width:55%}
+            .grand-total{font-size:15px;font-weight:bold}
+            .signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px}
+            .signature{border-top:1px solid #555;padding-top:6px;text-align:center;min-height:36px;font-weight:bold;font-size:10px}
+            .actions{display:flex;justify-content:center;gap:10px;margin:0 auto 16px}
+            .actions button{padding:10px 16px;border:0;border-radius:4px;font-weight:bold;cursor:pointer}
+            .print{background:#111;color:#fff}
+            .close{background:#ddd;color:#111}
+            .small{font-size:10px;color:#444}
+            .nowrap{white-space:nowrap}
+            @media(max-width:700px){
+              .sheet{margin:0;padding:12px}
+              .brand h1{font-size:17px}
+              .brand h2{font-size:13px}
+              .challan-no{min-width:95px}
+              .meta{grid-template-columns:1fr}
+              .cage-table th,.cage-table td{padding:3px 2px;font-size:9px}
+              .totals{grid-template-columns:1fr}
+            }
+            @media print{
+              body{background:#fff;font-size:10px}
+              .sheet{max-width:none;width:100%;margin:0;padding:8mm;border:0}
+              .actions{display:none}
+              .doc-title,.cage-table th,.meta-table td:first-child,.totals-table td:first-child{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+              tr{break-inside:avoid}
+              .sheet{break-after:avoid}
+            }
           </style>
         </head>
-        <body><main class="container"><h1>Delivery Challan</h1><p>Loading trip details...</p></main></body>
+        <body>
+          <div class="actions">
+            <button class="print" onclick="window.print()">Print / Save as PDF</button>
+            <button class="close" onclick="window.close()">Close</button>
+          </div>
+
+          <main class="sheet">
+            <div class="topline">
+              <div class="copy">Office Copy</div>
+
+              <div class="brand">
+                <h1>${escapeHtml(companyName)}</h1>
+                <h2>Bird Delivery Challan</h2>
+                <p>Trip and cage-wise bird details</p>
+              </div>
+
+              <div class="challan-no">
+                Challan No.<br/>
+                <strong>${escapeHtml(tripId)}</strong><br/>
+                Status: ${escapeHtml(dc.status || row.status || 'CLOSED')}
+              </div>
+            </div>
+
+            <div class="doc-title">Bird Dispatch / Ready Bird Challan</div>
+
+            <div class="meta">
+              <table class="meta-table">
+                <tr><td>Trader / Supplier</td><td>${escapeHtml(dc.trader_name || companyName)}</td></tr>
+                <tr><td>Trader Contact</td><td>${escapeHtml(dc.trader_number || '-')}</td></tr>
+                <tr><td>Farmer / Source</td><td>${escapeHtml(sourceName)}</td></tr>
+                <tr><td>Farmer Contact</td><td>${escapeHtml(sourcePhone)}</td></tr>
+                <tr><td>Farm Location</td><td>${escapeHtml(location)}</td></tr>
+              </table>
+
+              <table class="meta-table">
+                <tr><td>Trip No.</td><td>${escapeHtml(tripId)}</td></tr>
+                <tr><td>Date</td><td>${escapeHtml(date)}</td></tr>
+                <tr><td>Trip Time</td><td>${escapeHtml(time)}</td></tr>
+                <tr><td>Driver Name</td><td>${escapeHtml(dc.driver_name || row.driver_name || '-')}</td></tr>
+                <tr><td>Driver Contact</td><td>${escapeHtml(dc.driver_number || row.driver_mobile || '-')}</td></tr>
+              </table>
+            </div>
+
+            <div class="section-title">Cage-wise Bird and Weight Details</div>
+
+            <table class="cage-table">
+              <thead>
+                <tr>
+                  <th>Cage</th><th>Birds</th><th>Weight (kg)</th>
+                  <th>Cage</th><th>Birds</th><th>Weight (kg)</th>
+                  <th>Cage</th><th>Birds</th><th>Weight (kg)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${cageTableRows || '<tr><td colspan="9" style="text-align:center">No cage records found for this trip.</td></tr>'}
+              </tbody>
+            </table>
+
+            <div class="totals">
+              <table class="totals-table">
+                <tr>
+                  <td>Total Cages</td>
+                  <td>${formatNumber(totalCages)}</td>
+                </tr>
+                <tr>
+                  <td>Total Birds</td>
+                  <td>${formatNumber(totalBirds)}</td>
+                </tr>
+                <tr>
+                  <td>Total Weight (kg)</td>
+                  <td class="grand-total">${formatNumber(totalWeight)}</td>
+                </tr>
+                <tr>
+                  <td>Purchase Rate per kg (₹)</td>
+                  <td>${formatNumber(purchaseRatePerKg)}</td>
+                </tr>
+                <tr>
+                  <td>Total Purchase Cost (₹)</td>
+                  <td class="grand-total">${formatNumber(totalPurchaseCost)}</td>
+                </tr>
+                <tr>
+                  <td>Average Weight / Bird (kg)</td>
+                  <td>${totalBirds > 0 ? formatNumber(totalWeight / totalBirds) : '-'}</td>
+                </tr>
+              </table>
+
+              <table class="totals-table">
+                <tr>
+                  <td>Source Type</td>
+                  <td>${escapeHtml(String(currentSourceType).toUpperCase())}</td>
+                </tr>
+                <tr>
+                  <td>Farm / Dispatch Location</td>
+                  <td>${escapeHtml(location)}</td>
+                </tr>
+                <tr>
+                  <td>Generated On</td>
+                  <td>${escapeHtml(new Date().toLocaleString('en-IN'))}</td>
+                </tr>
+              </table>
+            </div>
+
+            <div class="signatures">
+              <div class="signature">Trader / Supplier Signature</div>
+              <div class="signature">Driver / Lifter Signature</div>
+              <div class="signature">Farmer / Receiver Signature</div>
+            </div>
+
+            <p class="small">Generated from Mr Chicken X · Trip #${escapeHtml(tripId)}</p>
+          </main>
+        </body>
       </html>
     `);
+
     dcWindow.document.close();
+  } catch (error) {
+    console.error('Failed to load Delivery Challan:', error);
 
-    try {
-      const response = await getTripDC(row.id);
-      // Supports Axios response, { success, data }, or a direct payload.
-      const responseBody = response?.data ?? response;
-      if (responseBody?.success === false) {
-        throw new Error(responseBody.message || 'Unable to load Delivery Challan.');
-      }
-      const dc = responseBody?.data ?? responseBody;
-      if (!dc || typeof dc !== 'object') {
-        throw new Error('The server returned an invalid Delivery Challan response.');
-      }
-
-      const cages = Array.isArray(dc.cages) ? dc.cages : [];
-      const rawDate = dc.trip_date || row.trip_date;
-      const date = rawDate && !Number.isNaN(new Date(rawDate).getTime())
-        ? new Date(rawDate).toLocaleDateString('en-IN')
-        : '-';
-      const rawTime = String(dc.trip_time || row.trip_time || '').trim();
-      const timeMatch = rawTime.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
-      const time = timeMatch
-        ? new Date(2000, 0, 1, Number(timeMatch[1]), Number(timeMatch[2])).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
-        : (rawTime || '-');
-
-      const totalCages = Number(dc.total_cages ?? cages.length);
-      const totalBirds = Number(dc.total_birds ?? cages.reduce((sum, cage) => sum + Number(cage.total_birds || 0), 0));
-      const totalWeight = Number(dc.total_weight ?? cages.reduce((sum, cage) => sum + Number(cage.total_weight || 0), 0));
-      const groupsPerRow = 3;
-      const cageGridRows = [];
-      for (let i = 0; i < cages.length; i += groupsPerRow) {
-        const group = cages.slice(i, i + groupsPerRow);
-        cageGridRows.push(`<tr>${Array.from({ length: groupsPerRow }, (_, j) => {
-          const cage = group[j];
-          return cage
-            ? `<td class="cage-no">${escapeHtml(cage.cage_number)}</td><td class="num">${formatNumber(cage.total_birds)}</td><td class="num">${formatNumber(cage.total_weight)}</td>`
-            : '<td></td><td></td><td></td>';
-        }).join('')}</tr>`);
-      }
-      const cageTableRows = cageGridRows.join('');
-      const tripId = dc.trip_id ?? row.id;
-      const companyName = dc.trader_name || 'BIRD SUPPLIER';
-      const sourceName = dc.farmer_name || (String(row.source_type || '').toLowerCase() === 'broker' ? (row.broker_name || '-') : '-');
-      const sourcePhone = dc.farmer_number || '-';
-      const location = dc.farm_location || row.farm_location || row.farmer_location || '-';
-
-      if (dcWindow.closed) return;
+    if (!dcWindow.closed) {
       dcWindow.document.open();
       dcWindow.document.write(`
         <!DOCTYPE html>
         <html lang="en">
           <head>
-            <meta charset="UTF-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <title>Bird Challan - Trip #${escapeHtml(tripId)}</title>
-            <style>
-              *{box-sizing:border-box}body{margin:0;background:#e9e9e9;color:#111;font-family:Arial,Helvetica,sans-serif;font-size:12px}
-              .sheet{width:100%;max-width:1100px;margin:18px auto;background:#fff;padding:22px 26px;border:1px solid #ccc}
-              .topline{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:2px solid #222;padding-bottom:10px}
-              .copy{font-size:10px;font-weight:bold;border:1px solid #555;padding:4px 7px;text-transform:uppercase}
-              .brand{text-align:center;flex:1}.brand h1{font-size:24px;margin:0 0 4px;letter-spacing:.4px;text-transform:uppercase}.brand h2{font-size:16px;margin:0 0 5px;text-transform:uppercase}.brand p{margin:2px 0;font-size:10px}
-              .challan-no{min-width:130px;border:1px solid #555;padding:8px;line-height:1.8}.challan-no strong{font-size:13px}
-              .doc-title{text-align:center;font-weight:bold;font-size:15px;letter-spacing:.8px;margin:12px 0;background:#eee;border:1px solid #aaa;padding:7px;text-transform:uppercase}
-              .meta{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;margin-bottom:10px}.meta-table{width:100%;border-collapse:collapse}.meta-table td{border:1px solid #777;padding:5px 7px;vertical-align:top}.meta-table td:first-child{width:42%;font-weight:bold;background:#f7f7f7}
-              .section-title{font-size:11px;font-weight:bold;text-transform:uppercase;margin:10px 0 4px}
-              .cage-table{width:100%;border-collapse:collapse;table-layout:fixed}.cage-table th,.cage-table td{border:1px solid #555;padding:5px 4px;height:24px}.cage-table th{background:#eee;text-align:center;font-size:10px}.cage-table td{font-size:11px}.cage-table .cage-no{text-align:center;width:6%;font-weight:800;background:#f1f1f1;font-size:12px}.cage-table .num{text-align:right;width:10%;font-variant-numeric:tabular-nums}
-              .totals{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;margin-top:12px}.totals-table{width:100%;border-collapse:collapse}.totals-table td{border:1px solid #777;padding:7px}.totals-table td:first-child{font-weight:bold;background:#f7f7f7;width:55%}.grand-total{font-size:15px;font-weight:bold}
-              .signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px}.signature{border-top:1px solid #555;padding-top:6px;text-align:center;min-height:36px;font-weight:bold;font-size:10px}
-              .actions{display:flex;justify-content:center;gap:10px;margin:0 auto 16px}.actions button{padding:10px 16px;border:0;border-radius:4px;font-weight:bold;cursor:pointer}.print{background:#111;color:#fff}.close{background:#ddd;color:#111}
-              .small{font-size:10px;color:#444}.nowrap{white-space:nowrap}
-              @media(max-width:700px){.sheet{margin:0;padding:12px}.brand h1{font-size:17px}.brand h2{font-size:13px}.challan-no{min-width:95px}.meta{grid-template-columns:1fr}.cage-table th,.cage-table td{padding:3px 2px;font-size:9px}.totals{grid-template-columns:1fr}}
-              @media print{body{background:#fff;font-size:10px}.sheet{max-width:none;width:100%;margin:0;padding:8mm;border:0}.actions{display:none}.doc-title,.cage-table th,.meta-table td:first-child,.totals-table td:first-child{-webkit-print-color-adjust:exact;print-color-adjust:exact}tr{break-inside:avoid}.sheet{break-after:avoid}}
-            </style>
+            <meta charset="UTF-8"/>
+            <title>Delivery Challan Error</title>
           </head>
-          <body>
-            <div class="actions"><button class="print" onclick="window.print()">Print / Save as PDF</button><button class="close" onclick="window.close()">Close</button></div>
-            <main class="sheet">
-              <div class="topline">
-                <div class="copy">Office Copy</div>
-                <div class="brand">
-                  <h1>${escapeHtml(companyName)}</h1>
-                  <h2>Bird Delivery Challan</h2>
-                  <p>Trip and cage-wise bird details</p>
-                </div>
-                <div class="challan-no">Challan No.<br/><strong>${escapeHtml(tripId)}</strong><br/>Status: ${escapeHtml(dc.status || row.status || 'CLOSED')}</div>
-              </div>
-              <div class="doc-title">Bird Dispatch / Ready Bird Challan</div>
-              <div class="meta">
-                <table class="meta-table">
-                  <tr><td>Trader / Supplier</td><td>${escapeHtml(dc.trader_name || companyName)}</td></tr>
-                  <tr><td>Trader Contact</td><td>${escapeHtml(dc.trader_number || '-')}</td></tr>
-                  <tr><td>Farmer / Source</td><td>${escapeHtml(sourceName)}</td></tr>
-                  <tr><td>Farmer Contact</td><td>${escapeHtml(sourcePhone)}</td></tr>
-                  <tr><td>Farm Location</td><td>${escapeHtml(location)}</td></tr>
-                </table>
-                <table class="meta-table">
-                  <tr><td>Trip No.</td><td>${escapeHtml(tripId)}</td></tr>
-                  <tr><td>Date</td><td>${escapeHtml(date)}</td></tr>
-                  <tr><td>Trip Time</td><td>${escapeHtml(time)}</td></tr>
-                  <tr><td>Driver Name</td><td>${escapeHtml(dc.driver_name || row.driver_name || '-')}</td></tr>
-                  <tr><td>Driver Contact</td><td>${escapeHtml(dc.driver_number || row.driver_mobile || '-')}</td></tr>
-                </table>
-              </div>
-              <div class="section-title">Cage-wise Bird and Weight Details</div>
-              <table class="cage-table">
-                <thead><tr>
-                  <th>Cage</th><th>Birds</th><th>Weight (kg)</th>
-                  <th>Cage</th><th>Birds</th><th>Weight (kg)</th>
-                  <th>Cage</th><th>Birds</th><th>Weight (kg)</th>
-                </tr></thead>
-                <tbody>
-                  ${cageTableRows || '<tr><td colspan="9" style="text-align:center">No cage records found for this trip.</td></tr>'}
-                </tbody>
-              </table>
-              <div class="totals">
-                <table class="totals-table">
-                  <tr><td>Total Cages</td><td>${formatNumber(totalCages)}</td></tr>
-                  <tr><td>Total Birds</td><td>${formatNumber(totalBirds)}</td></tr>
-                  <tr><td>Total Weight (kg)</td><td class="grand-total">${formatNumber(totalWeight)}</td></tr>
-                  <tr><td>Average Weight / Bird (kg)</td><td>${totalBirds > 0 ? formatNumber(totalWeight / totalBirds) : '-'}</td></tr>
-                </table>
-                <table class="totals-table">
-                  <tr><td>Source Type</td><td>${escapeHtml(sourceType || 'farmer').toUpperCase()}</td></tr>
-                  <tr><td>Farm / Dispatch Location</td><td>${escapeHtml(location)}</td></tr>
-                  <tr><td>Generated On</td><td>${escapeHtml(new Date().toLocaleString('en-IN'))}</td></tr>
-                </table>
-              </div>
-              <div class="signatures">
-                <div class="signature">Trader / Supplier Signature</div>
-                <div class="signature">Driver / Lifter Signature</div>
-                <div class="signature">Farmer / Receiver Signature</div>
-              </div>
-              <p class="small">Generated from Mr Chicken X · Trip #${escapeHtml(tripId)}</p>
-            </main>
+          <body style="background:#080808;color:#fff;font-family:Arial;padding:32px">
+            <h2>Unable to load Delivery Challan</h2>
+            <p>${escapeHtml(error.message || 'Please try again.')}</p>
+            <button onclick="window.close()">Close</button>
           </body>
         </html>
       `);
       dcWindow.document.close();
-    } catch (error) {
-      console.error('Failed to load Delivery Challan:', error);
-      if (!dcWindow.closed) {
-        dcWindow.document.open();
-        dcWindow.document.write(`
-          <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><title>Delivery Challan Error</title></head>
-          <body style="background:#080808;color:#fff;font-family:Arial;padding:32px">
-            <h2>Unable to load Delivery Challan</h2><p>${escapeHtml(error.message || 'Please try again.')}</p>
-            <button onclick="window.close()">Close</button>
-          </body></html>
-        `);
-        dcWindow.document.close();
-      }
     }
-  };
+  }
+};
+
 
   // ----------------------------------------------------------------------
   // Broker trip
