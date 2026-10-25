@@ -1,5 +1,4 @@
 import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
 import { useState, useEffect } from 'react';
 
 import {
@@ -158,6 +157,7 @@ setRows(
   // CUSTOMER LEDGER
 
 
+
 const handleCustomerChange = async (customer) => {
   setSelectedCustomer(customer);
   setSelectedTrip(null);
@@ -165,28 +165,39 @@ const handleCustomerChange = async (customer) => {
   setExpenses([]);
   setCustomerOutstanding(0);
 
-  if (!customer) return;
+  if (!customer) {
+    return;
+  }
 
   try {
     setReportLoading(true);
 
     const res = await getCustomerSalesDetails(customer.id);
 
-    // Support both direct and nested API response formats.
+    // Support both Axios and direct API responses.
     const responseData = res?.data ?? res;
+
+    // Support nested response: { rows: { rows: [], total_outstanding: 0 } }
     const resultData = responseData?.rows ?? responseData;
 
-    setRows(
-      Array.isArray(resultData?.rows)
-        ? resultData.rows
-        : Array.isArray(resultData)
-          ? resultData
-          : []
-    );
+    // Extract customer sales rows without nested ternary expressions.
+    let customerRows = [];
 
-    setCustomerOutstanding(
-      Number(resultData?.total_outstanding ?? responseData?.total_outstanding ?? 0)
-    );
+    if (Array.isArray(resultData?.rows)) {
+      customerRows = resultData.rows;
+    } else if (Array.isArray(resultData)) {
+      customerRows = resultData;
+    }
+
+    setRows(customerRows);
+
+    // Extract total outstanding, including previous outstanding balance.
+    const outstanding =
+      resultData?.total_outstanding ??
+      responseData?.total_outstanding ??
+      0;
+
+    setCustomerOutstanding(Number(outstanding) || 0);
   } catch (error) {
     console.error('Failed to load customer sales details:', error);
     setRows([]);
@@ -195,6 +206,7 @@ const handleCustomerChange = async (customer) => {
     setReportLoading(false);
   }
 };
+
 
 
   // --------------------------------------------------
@@ -328,15 +340,6 @@ const handleExportExcel = () => {
       .replace(/[<>:"/\\|?*]/g, '_');
 
     fileName = `${safeFileName}.xlsx`;
-
-    // Outstanding summary at the top of the worksheet
-    const outstandingSummary = [
-      { 'Customer Name': selectedCustomer.name || '-' },
-      {
-        'Total Outstanding': Number(customerOutstanding || 0),
-      },
-      {}, // Blank row before transaction details
-    ];
 
     // Customer sales details
     const customerSalesData = rows.map((row) => ({
