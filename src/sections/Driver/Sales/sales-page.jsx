@@ -88,10 +88,19 @@ const getCustomerAlertSeverity = (customer) => {
 };
 
 const formatRupees = (amount) =>
-  `₹${Number(amount || 0).toLocaleString('en-IN', {
+  `₹${Math.abs(Number(amount || 0)).toLocaleString('en-IN', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })}`;
+
+const formatOutstanding = (amount) => {
+  const value = Number(amount || 0);
+
+  if (value < 0) return `Advance credit: ${formatRupees(value)}`;
+  if (value === 0) return 'No pending dues';
+
+  return `Pending: ${formatRupees(value)}`;
+};
 
 
 export default function DriverSalesPage() {
@@ -402,6 +411,41 @@ export default function DriverSalesPage() {
   const handleSaveSale = async () => {
 
     try {
+      if (!trip || !customer || !mode) {
+        alert('Please select a trip, customer/driver, and action.');
+        return;
+      }
+
+      if (mode === 'PAYMENT') {
+        if (!['CASH', 'UPI', 'BOTH'].includes(paymentMode)) {
+          alert('Please select CASH, UPI, or BOTH for a payment.');
+          return;
+        }
+
+        const cashAmount =
+          paymentMode === 'CASH' || paymentMode === 'BOTH'
+            ? Number(payment.cash || 0)
+            : 0;
+        const upiAmount =
+          paymentMode === 'UPI' || paymentMode === 'BOTH'
+            ? Number(payment.upi || 0)
+            : 0;
+
+        if (
+          !Number.isFinite(cashAmount) ||
+          !Number.isFinite(upiAmount) ||
+          cashAmount < 0 ||
+          upiAmount < 0
+        ) {
+          alert('Payment amounts must be valid non-negative numbers.');
+          return;
+        }
+
+        if (cashAmount + upiAmount <= 0) {
+          alert('Payment amount must be greater than zero.');
+          return;
+        }
+      }
 
       // -------------------------------
 
@@ -528,6 +572,31 @@ export default function DriverSalesPage() {
       const response = await sellToCustomer(payload);
       const responseData = response?.data ?? response;
       const returnedCreditWarning = responseData?.credit_warning;
+
+      // Keep the customer balance current for the next selection.
+      if (customer.entityType === 'CUSTOMER') {
+        const returnedOutstanding =
+          responseData?.outstanding ?? responseData?.customer?.outstanding;
+
+        if (returnedOutstanding !== undefined && returnedOutstanding !== null) {
+          const nextOutstanding = Number(returnedOutstanding);
+          setCustomers((previousCustomers) =>
+            previousCustomers.map((item) =>
+              item.id === customer.id
+                ? { ...item, outstanding: nextOutstanding }
+                : item
+            )
+          );
+        } else {
+          // Refresh separately so a refresh failure doesn't mark a saved sale as failed.
+          try {
+            const refreshedCustomers = await getallCustomer();
+            setCustomers(refreshedCustomers || []);
+          } catch (refreshError) {
+            console.error('Could not refresh customer balances:', refreshError);
+          }
+        }
+      }
 
       if (mode === 'SALE' && returnedCreditWarning) {
         setCreditWarning(returnedCreditWarning);
@@ -816,7 +885,7 @@ export default function DriverSalesPage() {
             getOptionLabel={(option) => {
               if (!option) return '';
 
-              const outstanding = formatRupees(option.outstanding);
+              const outstanding = formatOutstanding(option.outstanding);
               const name = option.name || 'Unnamed';
 
               return option.entityType === 'DRIVER'
@@ -895,7 +964,7 @@ export default function DriverSalesPage() {
                             : 'success.main'
                         }
                       >
-                        {formatRupees(option.outstanding)}
+                        {formatOutstanding(option.outstanding)}
                       </Typography>
                     </Stack>
                   </Stack>
@@ -925,7 +994,7 @@ export default function DriverSalesPage() {
                 {CUSTOMER_TYPES[getCustomerType(customer)].description}
               </Typography>
               <Typography variant="body2" sx={{ mt: 0.5 }}>
-                Current outstanding: {formatRupees(customer.outstanding)}
+                Current outstanding: {formatOutstanding(customer.outstanding)}
               </Typography>
               <Typography variant="body2">
                 Credit limit: {Number(customer.credit_limit || 0) > 0
