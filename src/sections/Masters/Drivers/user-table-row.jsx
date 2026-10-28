@@ -15,7 +15,7 @@ import Iconify from 'src/components/iconify';
 export default function UserTableRow({
   row,
   onEdit,
-  onEnable,
+  onEnable, 
   onDisable,
   onDelete,
 }) {
@@ -43,6 +43,17 @@ export default function UserTableRow({
         <TableCell>{row.name}</TableCell>
 
         <TableCell>{row.mobile}</TableCell>
+
+
+<TableCell>
+  {row.monthly_salary != null
+    ? `₹${Number(row.monthly_salary).toLocaleString('en-IN', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      })}`
+    : 'Not set'}
+</TableCell>
+
 
         {/* STATUS CHIP */}
         <TableCell>

@@ -118,29 +118,31 @@ export default function DriverMasterPage() {
     }
   };
 
+
   const handleSaveDriver = async (payload) => {
     try {
       if (!selectedDriver) {
-        // ➕ ADD DRIVER
         await createDriver({
           name: payload.name,
           mobile: payload.mobile,
           password: '1234',
+          monthly_salary: payload.monthly_salary,
         });
       } else {
-        // ✏️ UPDATE DRIVER
         await UpdateDriver(selectedDriver.id, {
           name: payload.name,
           mobile: payload.mobile,
+          monthly_salary: payload.monthly_salary,
         });
       }
 
       setOpenDialog(false);
-      fetchDrivers();
+      await fetchDrivers();
     } catch (error) {
       console.error('Driver save failed', error);
     }
   };
+
 
 
   const handleDeleteDriver = async (driverId) => {
@@ -210,7 +212,8 @@ export default function DriverMasterPage() {
                   headLabel={[
                     { id: 'name', label: 'Name' },
                     { id: 'mobile', label: 'Mobile No.' },
-                    { id: 'mobile', label: 'Status' },
+                    { id: 'monthly_salary', label: 'Monthly Salary' },
+                    { id: 'status', label: 'Status' },
                     { id: '' },
                   ]}
                 />
