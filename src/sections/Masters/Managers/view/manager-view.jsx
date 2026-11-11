@@ -1,3 +1,4 @@
+
 import { useTheme } from '@emotion/react';
 import { useState, useEffect } from 'react';
 
@@ -41,34 +42,62 @@ export default function ManagerMasterPage() {
   const [orderBy, setOrderBy] = useState('name');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [managers, setManagers] = useState([])
+
+  const [managers, setManagers] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedManager, setSelectedManager] = useState(null);
-
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  // ----------------------------------------------------------------------
+  // FETCH MANAGERS
+  // ----------------------------------------------------------------------
+
+  const fetchManagers = async () => {
+    try {
+      const data = await getallManager();
+      setManagers(data);
+    } catch (error) {
+      console.error('Failed to fetch managers', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchManagers();
+  }, []);
+
+  // ----------------------------------------------------------------------
+  // SORTING
+  // ----------------------------------------------------------------------
+
   const handleSort = (event, id) => {
     const isAsc = orderBy === id && order === 'asc';
+
     if (id !== '') {
       setOrder(isAsc ? 'desc' : 'asc');
       setOrderBy(id);
     }
   };
 
+  // ----------------------------------------------------------------------
+  // SELECTION
+  // ----------------------------------------------------------------------
+
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelecteds = managers.map((n) => n.name);
+      const newSelecteds = managers.map((manager) => manager.name);
       setSelected(newSelecteds);
       return;
     }
+
     setSelected([]);
   };
 
   const handleClick = (event, name) => {
     const selectedIndex = selected.indexOf(name);
     let newSelected = [];
+
     if (selectedIndex === -1) {
       newSelected = newSelected.concat(selected, name);
     } else if (selectedIndex === 0) {
@@ -81,8 +110,13 @@ export default function ManagerMasterPage() {
         selected.slice(selectedIndex + 1)
       );
     }
+
     setSelected(newSelected);
   };
+
+  // ----------------------------------------------------------------------
+  // PAGINATION
+  // ----------------------------------------------------------------------
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -92,6 +126,10 @@ export default function ManagerMasterPage() {
     setPage(0);
     setRowsPerPage(parseInt(event.target.value, 10));
   };
+
+  // ----------------------------------------------------------------------
+  // SEARCH
+  // ----------------------------------------------------------------------
 
   const handleFilterByName = (event) => {
     setPage(0);
@@ -106,86 +144,105 @@ export default function ManagerMasterPage() {
 
   const notFound = !dataFiltered.length && !!filterName;
 
-  useEffect(() => {
-    fetchManagers();
-  }, []);
-
-  const fetchManagers = async () => {
-    try {
-      const data = await getallManager();
-      setManagers(data);
-    } catch (error) {
-      console.error('Failed to fetch traders', error);
-    }
-  };
+  // ----------------------------------------------------------------------
+  // CREATE / UPDATE MANAGER
+  // ----------------------------------------------------------------------
 
   const handleSaveManager = async (payload) => {
     try {
       if (!selectedManager) {
-        // ➕ ADD
         await createManager({
-          name: payload.name,
-          mobile: payload.mobile,
+          ...payload,
           password: '1234',
         });
       } else {
-        // ✏️ UPDATE
-        await UpdateManager(selectedManager.id, {
-          name: payload.name,
-          mobile: payload.mobile,
-        });
+        await UpdateManager(selectedManager.id, payload);
       }
 
       setOpenDialog(false);
-      fetchManagers();
+      setSelectedManager(null);
+
+      await fetchManagers();
     } catch (error) {
       console.error('Manager save failed', error);
     }
   };
 
+  // ----------------------------------------------------------------------
+  // DELETE MANAGER
+  // ----------------------------------------------------------------------
+
   const handleDeleteManager = async (managerId) => {
     try {
       await deleteManager(managerId);
-      fetchManagers();
+      await fetchManagers();
     } catch (error) {
       console.error('Delete manager failed', error);
     }
   };
 
+  // ----------------------------------------------------------------------
+  // DISABLE MANAGER
+  // ----------------------------------------------------------------------
+
   const handleDisableManager = async (managerId) => {
     try {
       await disableManager(managerId, false);
-      fetchManagers();
+      await fetchManagers();
     } catch (error) {
       console.error('Disable manager failed', error);
     }
   };
 
+  // ----------------------------------------------------------------------
+  // ENABLE MANAGER
+  // ----------------------------------------------------------------------
+
   const handleEnableManager = async (managerId) => {
     try {
       await disableManager(managerId, true);
-      fetchManagers();
+      await fetchManagers();
     } catch (error) {
       console.error('Enable manager failed', error);
     }
   };
 
+  // ----------------------------------------------------------------------
+  // DIALOG HANDLERS
+  // ----------------------------------------------------------------------
+
+  const handleOpenCreateDialog = () => {
+    setSelectedManager(null);
+    setOpenDialog(true);
+  };
+
+  const handleOpenEditDialog = (manager) => {
+    setSelectedManager(manager);
+    setOpenDialog(true);
+  };
+
+  // ----------------------------------------------------------------------
+
   return (
     <Container maxWidth="xxl">
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        mb={5}
+      >
         <Typography variant="h4">Managers</Typography>
 
-        {!isMobile && (<Button
-          variant="contained"
-          color="inherit"
-          startIcon={<Iconify icon="eva:plus-fill" />}
-          onClick={() => {
-            setSelectedManager(null); // new manager
-            setOpenDialog(true);
-          }}
-        >
-          New Manager
-        </Button>)}
+        {!isMobile && (
+          <Button
+            variant="contained"
+            color="inherit"
+            startIcon={<Iconify icon="eva:plus-fill" />}
+            onClick={handleOpenCreateDialog}
+          >
+            New Manager
+          </Button>
+        )}
       </Stack>
 
       <Card>
@@ -210,22 +267,26 @@ export default function ManagerMasterPage() {
                   headLabel={[
                     { id: 'name', label: 'Name' },
                     { id: 'mobile', label: 'Mobile No.' },
-                    { id: 'mobile', label: 'Status' },
+                    { id: 'monthly_salary', label: 'Monthly Salary' },
+                    { id: 'status', label: 'Status' },
                     { id: '' },
                   ]}
                 />
 
                 <TableBody>
                   {dataFiltered
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .slice(
+                      page * rowsPerPage,
+                      page * rowsPerPage + rowsPerPage
+                    )
                     .map((row) => (
                       <UserTableRow
+                        key={row.id}
                         row={row}
-                        onEdit={(manager) => {
-                          setSelectedManager(manager); // fill dialog
-                          setOpenDialog(true);         // open dialog
-                        }}
-                        handleClick={(event) => handleClick(event, row.name)}
+                        onEdit={handleOpenEditDialog}
+                        handleClick={(event) =>
+                          handleClick(event, row.name)
+                        }
                         onEnable={() => handleEnableManager(row.id)}
                         onDisable={() => handleDisableManager(row.id)}
                         onDelete={() => handleDeleteManager(row.id)}
@@ -234,7 +295,11 @@ export default function ManagerMasterPage() {
 
                   <TableEmptyRows
                     height={77}
-                    emptyRows={emptyRows(page, rowsPerPage, managers.length)}
+                    emptyRows={emptyRows(
+                      page,
+                      rowsPerPage,
+                      managers.length
+                    )}
                   />
 
                   {notFound && <TableNoData query={filterName} />}
@@ -247,11 +312,9 @@ export default function ManagerMasterPage() {
           <Stack spacing={2} sx={{ p: 2 }}>
             {dataFiltered.map((row) => (
               <UserCard
+                key={row.id}
                 row={row}
-                onEdit={() => {
-                  setSelectedManager(row);
-                  setOpenDialog(true);
-                }}
+                onEdit={() => handleOpenEditDialog(row)}
                 onEnable={() => handleEnableManager(row.id)}
                 onDisable={() => handleDisableManager(row.id)}
                 onDelete={() => handleDeleteManager(row.id)}
@@ -261,7 +324,6 @@ export default function ManagerMasterPage() {
             {!dataFiltered.length && <TableNoData query={filterName} />}
           </Stack>
         )}
-
 
         <TablePagination
           page={page}
@@ -274,31 +336,38 @@ export default function ManagerMasterPage() {
         />
       </Card>
 
+      {/* MOBILE CREATE BUTTON */}
       {isMobile && (
-        <Box sx={{ position: 'fixed', bottom: 16, left: 16, right: 16 }}>
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            left: 16,
+            right: 16,
+          }}
+        >
           <Button
             fullWidth
             variant="contained"
             color="inherit"
             startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setSelectedManager(null);
-              setOpenDialog(true);
-            }}
+            onClick={handleOpenCreateDialog}
           >
             New Manager
           </Button>
         </Box>
       )}
 
-
+      {/* CREATE / EDIT DIALOG */}
       <EditManagerDialog
         open={openDialog}
         manager={selectedManager}
-        onClose={() => setOpenDialog(false)}
+        onClose={() => {
+          setOpenDialog(false);
+          setSelectedManager(null);
+        }}
         onSave={handleSaveManager}
       />
-
     </Container>
   );
 }

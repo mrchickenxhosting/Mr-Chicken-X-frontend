@@ -119,29 +119,24 @@ export default function DriverMasterPage() {
   };
 
 
-  const handleSaveDriver = async (payload) => {
-    try {
-      if (!selectedDriver) {
-        await createDriver({
-          name: payload.name,
-          mobile: payload.mobile,
-          password: '1234',
-          monthly_salary: payload.monthly_salary,
-        });
-      } else {
-        await UpdateDriver(selectedDriver.id, {
-          name: payload.name,
-          mobile: payload.mobile,
-          monthly_salary: payload.monthly_salary,
-        });
-      }
 
-      setOpenDialog(false);
-      await fetchDrivers();
-    } catch (error) {
-      console.error('Driver save failed', error);
+const handleSaveDriver = async (payload) => {
+  try {
+    if (!selectedDriver) {
+      await createDriver({
+        ...payload,
+        password: '1234',
+      });
+    } else {
+      await UpdateDriver(selectedDriver.id, payload);
     }
-  };
+
+    setOpenDialog(false);
+    await fetchDrivers();
+  } catch (error) {
+    console.error('Driver save failed', error);
+  }
+};
 
 
 

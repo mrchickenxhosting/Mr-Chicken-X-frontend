@@ -1,3 +1,4 @@
+
 import { useTheme } from '@emotion/react';
 import { useState, useEffect } from 'react';
 
@@ -28,7 +29,7 @@ import TableNoData from '../table-no-data';
 import UserTableRow from '../user-table-row';
 import UserTableHead from '../user-table-head';
 import TableEmptyRows from '../table-empty-rows';
-import EditDriverDialog from '../EditLifterDialog';
+import EditLifterDialog from '../EditLifterDialog';
 import UserTableToolbar from '../user-table-toolbar';
 import { emptyRows, applyFilter, getComparator } from '../utils';
 
@@ -41,15 +42,34 @@ export default function LifterMasterPage() {
   const [orderBy, setOrderBy] = useState('name');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [drivers, setDrivers] = useState([])
+
+  const [lifters, setLifters] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
-  const [selectedDriver, setSelectedDriver] = useState(null);
+  const [selectedLifter, setSelectedLifter] = useState(null);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  // ----------------------------------------------------------------------
+
+  const fetchLifters = async () => {
+    try {
+      const data = await getallLifter();
+      setLifters(data);
+    } catch (error) {
+      console.error('Failed to fetch lifters', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchLifters();
+  }, []);
+
+  // ----------------------------------------------------------------------
+
   const handleSort = (event, id) => {
     const isAsc = orderBy === id && order === 'asc';
+
     if (id !== '') {
       setOrder(isAsc ? 'desc' : 'asc');
       setOrderBy(id);
@@ -58,16 +78,18 @@ export default function LifterMasterPage() {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelecteds = drivers.map((n) => n.name);
+      const newSelecteds = lifters.map((lifter) => lifter.name);
       setSelected(newSelecteds);
       return;
     }
+
     setSelected([]);
   };
 
   const handleClick = (event, name) => {
     const selectedIndex = selected.indexOf(name);
     let newSelected = [];
+
     if (selectedIndex === -1) {
       newSelected = newSelected.concat(selected, name);
     } else if (selectedIndex === 0) {
@@ -80,6 +102,7 @@ export default function LifterMasterPage() {
         selected.slice(selectedIndex + 1)
       );
     }
+
     setSelected(newSelected);
   };
 
@@ -97,95 +120,113 @@ export default function LifterMasterPage() {
     setFilterName(event.target.value);
   };
 
+  // ----------------------------------------------------------------------
+
   const dataFiltered = applyFilter({
-    inputData: drivers,
+    inputData: lifters,
     comparator: getComparator(order, orderBy),
     filterName,
   });
 
   const notFound = !dataFiltered.length && !!filterName;
 
-  useEffect(() => {
-    fetchDrivers();
-  }, []);
+  // ----------------------------------------------------------------------
+  // CREATE / UPDATE LIFTER
+  // ----------------------------------------------------------------------
 
-  const fetchDrivers = async () => {
+  const handleSaveLifter = async (payload) => {
     try {
-      const data = await getallLifter();
-      setDrivers(data);
-    } catch (error) {
-      console.error('Failed to fetch traders', error);
-    }
-  };
-
-  const handleSaveDriver = async (payload) => {
-    try {
-      if (!selectedDriver) {
-        // ➕ ADD DRIVER
+      if (!selectedLifter) {
         await createLifter({
-          name: payload.name,
-          mobile: payload.mobile,
+          ...payload,
           password: '1234',
         });
       } else {
-        // ✏️ UPDATE DRIVER
-        await UpdateLifter(selectedDriver.id, {
-          name: payload.name,
-          mobile: payload.mobile,
-        });
+        await UpdateLifter(selectedLifter.id, payload);
       }
 
       setOpenDialog(false);
-      fetchDrivers();
+      setSelectedLifter(null);
+
+      await fetchLifters();
     } catch (error) {
-      console.error('Driver save failed', error);
+      console.error('Lifter save failed', error);
     }
   };
 
+  // ----------------------------------------------------------------------
+  // DELETE LIFTER
+  // ----------------------------------------------------------------------
 
-  const handleDeleteDriver = async (driverId) => {
+  const handleDeleteLifter = async (lifterId) => {
     try {
-      await deleteLifter(driverId);
-      fetchDrivers();
+      await deleteLifter(lifterId);
+      await fetchLifters();
     } catch (error) {
-      console.error('Delete driver failed', error);
+      console.error('Delete lifter failed', error);
     }
   };
 
-  const handleDisableDriver = async (driverId) => {
+  // ----------------------------------------------------------------------
+  // DISABLE LIFTER
+  // ----------------------------------------------------------------------
+
+  const handleDisableLifter = async (lifterId) => {
     try {
-      await disableLifter(driverId, false);
-      fetchDrivers();
+      await disableLifter(lifterId, false);
+      await fetchLifters();
     } catch (error) {
-      console.error('Disable driver failed', error);
+      console.error('Disable lifter failed', error);
     }
   };
 
-  const handleEnableDriver = async (driverId) => {
+  // ----------------------------------------------------------------------
+  // ENABLE LIFTER
+  // ----------------------------------------------------------------------
+
+  const handleEnableLifter = async (lifterId) => {
     try {
-      await disableLifter(driverId, true);
-      fetchDrivers();
+      await disableLifter(lifterId, true);
+      await fetchLifters();
     } catch (error) {
-      console.error('Enable driver failed', error);
+      console.error('Enable lifter failed', error);
     }
   };
+
+  // ----------------------------------------------------------------------
+
+  const handleOpenCreateDialog = () => {
+    setSelectedLifter(null);
+    setOpenDialog(true);
+  };
+
+  const handleOpenEditDialog = (lifter) => {
+    setSelectedLifter(lifter);
+    setOpenDialog(true);
+  };
+
+  // ----------------------------------------------------------------------
 
   return (
     <Container maxWidth="xxl">
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        mb={5}
+      >
         <Typography variant="h4">Lifter</Typography>
 
-        {!isMobile && (<Button
-          variant="contained"
-          color="inherit"
-          startIcon={<Iconify icon="eva:plus-fill" />}
-          onClick={() => {
-            setSelectedDriver(null); // new manager
-            setOpenDialog(true);
-          }}
-        >
-          New Lifter
-        </Button>)}
+        {!isMobile && (
+          <Button
+            variant="contained"
+            color="inherit"
+            startIcon={<Iconify icon="eva:plus-fill" />}
+            onClick={handleOpenCreateDialog}
+          >
+            New Lifter
+          </Button>
+        )}
       </Stack>
 
       <Card>
@@ -203,38 +244,46 @@ export default function LifterMasterPage() {
                 <UserTableHead
                   order={order}
                   orderBy={orderBy}
-                  rowCount={drivers.length}
+                  rowCount={lifters.length}
                   numSelected={selected.length}
                   onRequestSort={handleSort}
                   onSelectAllClick={handleSelectAllClick}
                   headLabel={[
                     { id: 'name', label: 'Name' },
                     { id: 'mobile', label: 'Mobile No.' },
-                    { id: 'mobile', label: 'Status' },
+                    { id: 'monthly_salary', label: 'Monthly Salary' },
+                    { id: 'status', label: 'Status' },
                     { id: '' },
                   ]}
                 />
 
                 <TableBody>
                   {dataFiltered
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .slice(
+                      page * rowsPerPage,
+                      page * rowsPerPage + rowsPerPage
+                    )
                     .map((row) => (
                       <UserTableRow
+                        key={row.id}
                         row={row}
-                        onEdit={(driver) => {
-                          setSelectedDriver(driver);
-                          setOpenDialog(true);
-                        }}
-                        handleClick={(event) => handleClick(event, row.name)}
-                        onEnable={() => handleEnableDriver(row.id)}
-                        onDisable={() => handleDisableDriver(row.id)}
-                        onDelete={() => handleDeleteDriver(row.id)}
+                        onEdit={handleOpenEditDialog}
+                        handleClick={(event) =>
+                          handleClick(event, row.name)
+                        }
+                        onEnable={() => handleEnableLifter(row.id)}
+                        onDisable={() => handleDisableLifter(row.id)}
+                        onDelete={() => handleDeleteLifter(row.id)}
                       />
                     ))}
 
                   <TableEmptyRows
                     height={77}
-                    emptyRows={emptyRows(page, rowsPerPage, drivers.length)}
+                    emptyRows={emptyRows(
+                      page,
+                      rowsPerPage,
+                      lifters.length
+                    )}
                   />
 
                   {notFound && <TableNoData query={filterName} />}
@@ -247,26 +296,25 @@ export default function LifterMasterPage() {
           <Stack spacing={2} sx={{ p: 2 }}>
             {dataFiltered.map((row) => (
               <UserCard
+                key={row.id}
                 row={row}
-                onEdit={() => {
-                  setSelectedDriver(row);
-                  setOpenDialog(true);
-                }}
-                onEnable={() => handleEnableDriver(row.id)}
-                onDisable={() => handleDisableDriver(row.id)}
-                onDelete={() => handleDeleteDriver(row.id)}
+                onEdit={() => handleOpenEditDialog(row)}
+                onEnable={() => handleEnableLifter(row.id)}
+                onDisable={() => handleDisableLifter(row.id)}
+                onDelete={() => handleDeleteLifter(row.id)}
               />
             ))}
 
-            {!dataFiltered.length && <TableNoData query={filterName} />}
+            {!dataFiltered.length && (
+              <TableNoData query={filterName} />
+            )}
           </Stack>
         )}
-
 
         <TablePagination
           page={page}
           component="div"
-          count={drivers.length}
+          count={lifters.length}
           rowsPerPage={rowsPerPage}
           onPageChange={handleChangePage}
           rowsPerPageOptions={[5, 10, 25]}
@@ -274,31 +322,38 @@ export default function LifterMasterPage() {
         />
       </Card>
 
+      {/* MOBILE CREATE BUTTON */}
       {isMobile && (
-        <Box sx={{ position: 'fixed', bottom: 16, left: 16, right: 16 }}>
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            left: 16,
+            right: 16,
+          }}
+        >
           <Button
             fullWidth
             variant="contained"
             color="inherit"
             startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setSelectedDriver(null)
-              setOpenDialog(true)
-            }}
+            onClick={handleOpenCreateDialog}
           >
-            New Driver
+            New Lifter
           </Button>
         </Box>
       )}
 
-
-      <EditDriverDialog
+      {/* CREATE / EDIT DIALOG */}
+      <EditLifterDialog
         open={openDialog}
-        driver={selectedDriver}
-        onClose={() => setOpenDialog(false)}
-        onSave={handleSaveDriver}
+        driver={selectedLifter}
+        onClose={() => {
+          setOpenDialog(false);
+          setSelectedLifter(null);
+        }}
+        onSave={handleSaveLifter}
       />
-
     </Container>
   );
 }

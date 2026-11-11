@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 
@@ -16,6 +17,7 @@ export default function UserTableRow({
   onEnable,
   onDisable,
   onDelete,
+  showSalary = false,
 }) {
   const [open, setOpen] = useState(null);
 
@@ -27,20 +29,33 @@ export default function UserTableRow({
     setOpen(null);
   };
 
-  const isActive = row.status; // manager status from DB
+  const isActive = row.status;
+
+  const formattedSalary =
+    row.monthly_salary != null
+      ? `₹${Number(row.monthly_salary).toLocaleString('en-IN', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        })}`
+      : 'Not set';
 
   return (
     <>
       <TableRow
         hover
         sx={{
-          opacity: isActive ? 1 : 0.6, // muted if disabled
+          opacity: isActive ? 1 : 0.6,
         }}
       >
         <TableCell>{row.name}</TableCell>
+
         <TableCell>{row.mobile}</TableCell>
 
-         <TableCell>
+        {showSalary && (
+          <TableCell>{formattedSalary}</TableCell>
+        )}
+
+        <TableCell>
           <Chip
             label={isActive ? 'Active' : 'Disabled'}
             color={isActive ? 'success' : 'error'}
@@ -60,11 +75,18 @@ export default function UserTableRow({
         open={Boolean(open)}
         anchorEl={open}
         onClose={handleCloseMenu}
-        anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        PaperProps={{ sx: { width: 160 } }}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        PaperProps={{
+          sx: { width: 160 },
+        }}
       >
-        {/* EDIT */}
         <MenuItem
           onClick={() => {
             onEdit(row);
@@ -75,7 +97,6 @@ export default function UserTableRow({
           Edit
         </MenuItem>
 
-        {/* ENABLE / DISABLE */}
         {isActive ? (
           <MenuItem
             onClick={() => {
@@ -100,7 +121,6 @@ export default function UserTableRow({
           </MenuItem>
         )}
 
-        {/* DELETE */}
         <MenuItem
           onClick={() => {
             onDelete();
@@ -122,4 +142,5 @@ UserTableRow.propTypes = {
   onEnable: PropTypes.func.isRequired,
   onDisable: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
+  showSalary: PropTypes.bool,
 };

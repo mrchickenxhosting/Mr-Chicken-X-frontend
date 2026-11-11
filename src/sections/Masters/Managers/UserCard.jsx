@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 
@@ -23,6 +24,7 @@ export default function UserCard({
   onEnable,
   onDisable,
   onDelete,
+  showSalary = false,
 }) {
   const [openMenu, setOpenMenu] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
@@ -43,20 +45,40 @@ export default function UserCard({
 
   const isActive = row.status;
 
+  const formattedSalary =
+    row.monthly_salary != null
+      ? `₹${Number(row.monthly_salary).toLocaleString('en-IN', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        })}`
+      : 'Not set';
+
   return (
     <Card
       sx={{
         p: 2,
-        opacity: isActive ? 1 : 0.6, // 👈 muted if disabled
+        opacity: isActive ? 1 : 0.6,
       }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-        <Stack spacing={0.3}>
-          <Typography variant="subtitle1">{row.name}</Typography>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="flex-start"
+      >
+        <Stack spacing={0.5}>
+          <Typography variant="subtitle1">
+            {row.name}
+          </Typography>
 
           <Typography variant="body2" color="text.secondary">
             Mobile No.: {row.mobile}
           </Typography>
+
+          {showSalary && (
+            <Typography variant="body2" color="text.secondary">
+              Monthly Salary: <strong>{formattedSalary}</strong>
+            </Typography>
+          )}
 
           <Chip
             label={isActive ? 'Active' : 'Disabled'}
@@ -77,16 +99,21 @@ export default function UserCard({
         open={Boolean(openMenu)}
         anchorEl={openMenu}
         onClose={handleCloseMenu}
-        anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
         slotProps={{
           paper: { sx: { width: 160 } },
         }}
       >
-        {/* EDIT */}
         <MenuItem
           onClick={() => {
-            onEdit();
+            onEdit(row);
             handleCloseMenu();
           }}
         >
@@ -94,7 +121,6 @@ export default function UserCard({
           Edit
         </MenuItem>
 
-        {/* ENABLE / DISABLE */}
         {isActive ? (
           <MenuItem
             onClick={() => {
@@ -119,7 +145,6 @@ export default function UserCard({
           </MenuItem>
         )}
 
-        {/* DELETE */}
         <MenuItem
           onClick={() => setOpenDialog(true)}
           sx={{ color: 'error.main' }}
@@ -130,16 +155,28 @@ export default function UserCard({
       </Popover>
 
       {/* DELETE CONFIRMATION */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+      <Dialog
+        open={openDialog}
+        onClose={() => setOpenDialog(false)}
+      >
         <DialogTitle>Delete Manager</DialogTitle>
+
         <DialogContent>
           <DialogContentText>
             Are you sure you want to delete <strong>{row.name}</strong>?
           </DialogContentText>
         </DialogContent>
+
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button color="error" variant="contained" onClick={handleDeleteConfirm}>
+          <Button onClick={() => setOpenDialog(false)}>
+            Cancel
+          </Button>
+
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleDeleteConfirm}
+          >
             Delete
           </Button>
         </DialogActions>
@@ -154,4 +191,5 @@ UserCard.propTypes = {
   onEnable: PropTypes.func.isRequired,
   onDisable: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
+  showSalary: PropTypes.bool,
 };
