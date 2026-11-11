@@ -34,12 +34,11 @@ import { emptyRows, applyFilter, getComparator } from '../utils';
 
 // ----------------------------------------------------------------------
 
-
 export default function CarMasterPage() {
   const [page, setPage] = useState(0);
   const [order, setOrder] = useState('asc');
   const [selected, setSelected] = useState([]);
-  const [orderBy, setOrderBy] = useState('name');
+  const [orderBy, setOrderBy] = useState('car_number');
   const [filterName, setFilterName] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [openDialog, setOpenDialog] = useState(false);
@@ -49,8 +48,22 @@ export default function CarMasterPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  useEffect(() => {
+    fetchCars();
+  }, []);
+
+  const fetchCars = async () => {
+    try {
+      const data = await getallCars();
+      setCars(data);
+    } catch (error) {
+      console.error('Failed to fetch cars:', error);
+    }
+  };
+
   const handleSort = (event, id) => {
     const isAsc = orderBy === id && order === 'asc';
+
     if (id !== '') {
       setOrder(isAsc ? 'desc' : 'asc');
       setOrderBy(id);
@@ -59,18 +72,19 @@ export default function CarMasterPage() {
 
   const handleSelectAllClick = (event) => {
     if (event.target.checked) {
-      const newSelecteds = cars.map((n) => n.name);
-      setSelected(newSelecteds);
+      setSelected(cars.map((car) => car.car_number));
       return;
     }
+
     setSelected([]);
   };
 
-  const handleClick = (event, name) => {
-    const selectedIndex = selected.indexOf(name);
+  const handleClick = (event, carNumber) => {
+    const selectedIndex = selected.indexOf(carNumber);
     let newSelected = [];
+
     if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selected, name);
+      newSelected = newSelected.concat(selected, carNumber);
     } else if (selectedIndex === 0) {
       newSelected = newSelected.concat(selected.slice(1));
     } else if (selectedIndex === selected.length - 1) {
@@ -81,6 +95,7 @@ export default function CarMasterPage() {
         selected.slice(selectedIndex + 1)
       );
     }
+
     setSelected(newSelected);
   };
 
@@ -106,87 +121,99 @@ export default function CarMasterPage() {
 
   const notFound = !dataFiltered.length && !!filterName;
 
-  useEffect(() => {
-    fetchCars();
-  }, []);
-
-  const fetchCars = async () => {
-    try {
-      const data = await getallCars();
-      setCars(data);
-    } catch (error) {
-      console.error('Failed to fetch cars', error);
-    }
-  };
+  // ----------------------------------------------------------------------
 
   const handleSaveCar = async (payload) => {
     try {
+      const formData = new FormData();
+
+      formData.append('car_number', payload.car_number);
+      formData.append('model_name', payload.model_name);
+      formData.append(
+        'max_capacity_cages',
+        String(payload.max_capacity_cages)
+      );
+
+      // Only append a file when the user selects a new RC Book.
+      // If omitted during edit, the existing RC Book is preserved.
+      if (payload.rc_book) {
+        formData.append('rc_book', payload.rc_book);
+      }
+
       if (!selectedCar) {
-        // ➕ ADD CAR
-        await createCar({
-          car_number: payload.car_number,
-          model_name: payload.model_name,
-          max_capacity_cages: payload.max_capacity_cages,
-        });
+        await createCar(formData);
       } else {
-        // ✏️ UPDATE CAR
-        await updateCar(selectedCar.id, {
-          car_number: payload.car_number,
-          model_name: payload.model_name,
-          max_capacity_cages: payload.max_capacity_cages,
-        });
+        await updateCar(selectedCar.id, formData);
       }
 
       setOpenDialog(false);
-      fetchCars();
+      setSelectedCar(null);
+      await fetchCars();
     } catch (error) {
-      console.error('Car save failed', error);
+      console.error('Car save failed:', error);
+      throw error;
     }
   };
 
   const handleDeleteCar = async (carId) => {
     try {
       await deleteCar(carId);
-      fetchCars();
+      await fetchCars();
     } catch (error) {
-      console.error('Delete car failed', error);
+      console.error('Delete car failed:', error);
     }
   };
 
   const handleDisableCar = async (carId) => {
     try {
       await disableCar(carId, false);
-      fetchCars();
+      await fetchCars();
     } catch (error) {
-      console.error('Disable car failed', error);
+      console.error('Disable car failed:', error);
     }
   };
 
   const handleEnableCar = async (carId) => {
     try {
       await disableCar(carId, true);
-      fetchCars();
+      await fetchCars();
     } catch (error) {
-      console.error('Enable car failed', error);
+      console.error('Enable car failed:', error);
     }
   };
 
+  const handleOpenAddDialog = () => {
+    setSelectedCar(null);
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setSelectedCar(null);
+  };
+
+  // ----------------------------------------------------------------------
+
   return (
     <Container maxWidth="xxl">
-      <Stack direction="row" alignItems="center" justifyContent="space-between" mb={5}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        mb={5}
+      >
         <Typography variant="h4">Cars</Typography>
 
-        {!isMobile && (<Button
-          variant="contained"
-          color="inherit"
-          startIcon={<Iconify icon="eva:plus-fill" />}
-          onClick={() => {
-            setSelectedCar(null);
-            setOpenDialog(true);
-          }}
-        >
-          New Car
-        </Button>)}
+        {!isMobile && (
+          <Button
+            variant="contained"
+            color="inherit"
+            startIcon={<Iconify icon="eva:plus-fill" />}
+            onClick={handleOpenAddDialog}
+          >
+            New Car
+          </Button>
+        )}
       </Stack>
 
       <Card>
@@ -197,7 +224,6 @@ export default function CarMasterPage() {
         />
 
         {!isMobile ? (
-          // ================= DESKTOP TABLE =================
           <Scrollbar>
             <TableContainer sx={{ overflow: 'unset' }}>
               <Table sx={{ minWidth: 800 }}>
@@ -209,25 +235,32 @@ export default function CarMasterPage() {
                   onRequestSort={handleSort}
                   onSelectAllClick={handleSelectAllClick}
                   headLabel={[
-                    { id: 'carno', label: 'Car No.' },
-                    { id: 'model', label: 'Model No.' },
-                    { id: 'maxcapacity', label: 'Max Capacity' },
-                    { id: 'mobile', label: 'Status' },
+                    { id: 'car_number', label: 'Car No.' },
+                    { id: 'model_name', label: 'Model Name' },
+                    { id: 'max_capacity_cages', label: 'Max Capacity' },
+                    { id: 'is_active', label: 'Status' },
+                    { id: 'rc', label: 'RC Book ' },
                     { id: '' },
                   ]}
                 />
 
                 <TableBody>
                   {dataFiltered
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .slice(
+                      page * rowsPerPage,
+                      page * rowsPerPage + rowsPerPage
+                    )
                     .map((row) => (
                       <UserTableRow
+                        key={row.id}
                         row={row}
                         onEdit={(car) => {
                           setSelectedCar(car);
                           setOpenDialog(true);
                         }}
-                        handleClick={(event) => handleClick(event, row.name)}
+                        handleClick={(event) =>
+                          handleClick(event, row.car_number)
+                        }
                         onEnable={() => handleEnableCar(row.id)}
                         onDisable={() => handleDisableCar(row.id)}
                         onDelete={() => handleDeleteCar(row.id)}
@@ -245,33 +278,33 @@ export default function CarMasterPage() {
             </TableContainer>
           </Scrollbar>
         ) : (
-          // ================= MOBILE CARD LIST =================
           <Stack spacing={2} sx={{ p: 2 }}>
-            {dataFiltered.map((row) => (
-              <CarCard
-                row={row}
-                onEdit={() => {
-                  setSelectedCar(row);
-                  setOpenDialog(true);
-                }}
-                onEnable={() => handleEnableCar(row.id)}
-                onDisable={() => handleDisableCar(row.id)}
-                onDelete={() => handleDeleteCar(row.id)}
-              />
-            ))}
+            {dataFiltered
+              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+              .map((row) => (
+                <CarCard
+                  key={row.id}
+                  row={row}
+                  onEdit={() => {
+                    setSelectedCar(row);
+                    setOpenDialog(true);
+                  }}
+                  onEnable={() => handleEnableCar(row.id)}
+                  onDisable={() => handleDisableCar(row.id)}
+                  onDelete={() => handleDeleteCar(row.id)}
+                />
+              ))}
 
             {!dataFiltered.length && <TableNoData query={filterName} />}
           </Stack>
         )}
 
-
         <TablePagination
           page={page}
           component="div"
-          count={cars.length}
+          count={dataFiltered.length}
           rowsPerPage={rowsPerPage}
           onPageChange={handleChangePage}
-
           rowsPerPageOptions={[5, 10, 25]}
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
@@ -284,24 +317,19 @@ export default function CarMasterPage() {
             variant="contained"
             color="inherit"
             startIcon={<Iconify icon="eva:plus-fill" />}
-            onClick={() => {
-              setSelectedCar(null);
-              setOpenDialog(true);
-            }}
+            onClick={handleOpenAddDialog}
           >
             New Car
           </Button>
         </Box>
       )}
 
-
       <EditCarDialog
         open={openDialog}
         car={selectedCar}
-        onClose={() => setOpenDialog(false)}
+        onClose={handleCloseDialog}
         onSave={handleSaveCar}
       />
-
     </Container>
   );
 }
