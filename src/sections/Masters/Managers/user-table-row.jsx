@@ -51,9 +51,8 @@ export default function UserTableRow({
 
         <TableCell>{row.mobile}</TableCell>
 
-        {showSalary && (
-          <TableCell>{formattedSalary}</TableCell>
-        )}
+         <TableCell>{formattedSalary}</TableCell>
+
 
         <TableCell>
           <Chip
